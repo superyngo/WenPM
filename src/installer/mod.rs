@@ -7,4 +7,6 @@ pub mod symlink;
 // Re-export commonly used items
 pub use extractor::{extract_archive, find_executable};
 pub use shim::create_shim;
+
+#[cfg(unix)]
 pub use symlink::create_symlink;

@@ -8,7 +8,7 @@ mod installer;
 mod providers;
 mod utils;
 
-use cli::{Cli, Commands};
+use cli::{Cli, Commands, SourceCommands};
 use colored::Colorize;
 
 fn main() {
@@ -29,27 +29,32 @@ fn main() {
     let result = match cli.command {
         Commands::Init => commands::run_init(),
 
-        Commands::Add { urls, source } => commands::run_add(urls, source),
+        Commands::Source { command } => {
+            let source_cmd = match command {
+                SourceCommands::Add { urls } => commands::source::SourceCommand::Add { urls },
+                SourceCommands::Del { names } => commands::source::SourceCommand::Del { names },
+                SourceCommands::Import { source } => {
+                    commands::source::SourceCommand::Import { source }
+                }
+                SourceCommands::Export { output } => {
+                    commands::source::SourceCommand::Export { output }
+                }
+                SourceCommands::Update => commands::source::SourceCommand::Update,
+                SourceCommands::List => commands::source::SourceCommand::List,
+                SourceCommands::Info { names } => commands::source::SourceCommand::Info { names },
+            };
+            commands::run_source(source_cmd)
+        }
+
+        Commands::Add { names, yes } => commands::run_add(names, yes),
 
         Commands::List => commands::run_list(),
 
         Commands::Search { names } => commands::run_search(names),
 
-        Commands::Info { names } => commands::run_info(names),
+        Commands::Update { names, yes } => commands::run_update(names, yes),
 
-        Commands::Update => commands::run_update(),
-
-        Commands::Install { names, yes } => commands::run_install(names, yes),
-
-        Commands::Upgrade { names, yes } => commands::run_upgrade(names, yes),
-
-        Commands::Delete { names, yes, force } => commands::run_delete(names, yes, force),
-
-        Commands::SetupPath { .. } => {
-            eprintln!("{}", "Command not yet implemented".yellow());
-            eprintln!("This will be available in Phase 2");
-            Ok(())
-        }
+        Commands::Del { names, yes, force } => commands::run_delete(names, yes, force),
     };
 
     // Handle errors

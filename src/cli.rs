@@ -19,18 +19,24 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Add packages from GitHub repository URLs
-    #[command(visible_alias = "a")]
-    Add {
-        /// GitHub repository URLs (can specify multiple)
-        urls: Vec<String>,
-
-        /// Read URLs from a file or online URL (one per line)
-        #[arg(short, long)]
-        source: Option<String>,
+    /// Manage package sources
+    Source {
+        #[command(subcommand)]
+        command: SourceCommands,
     },
 
-    /// List available packages for the current platform
+    /// Install packages (alias: add)
+    #[command(visible_alias = "a")]
+    Add {
+        /// Package names to install (supports wildcards *)
+        names: Vec<String>,
+
+        /// Skip confirmation prompts
+        #[arg(short = 'y', long)]
+        yes: bool,
+    },
+
+    /// List installed packages
     #[command(visible_alias = "ls")]
     List,
 
@@ -41,30 +47,9 @@ pub enum Commands {
         names: Vec<String>,
     },
 
-    /// Show package information
-    Info {
-        /// Package names to show (supports wildcards *)
-        names: Vec<String>,
-    },
-
-    /// Update package metadata from sources
-    #[command(visible_alias = "up")]
-    Update,
-
-    /// Install packages
-    #[command(visible_alias = "i")]
-    Install {
-        /// Package names to install (supports wildcards *)
-        names: Vec<String>,
-
-        /// Skip confirmation prompts
-        #[arg(short = 'y', long)]
-        yes: bool,
-    },
-
     /// Upgrade installed packages
-    #[command(visible_alias = "ug")]
-    Upgrade {
+    #[command(visible_alias = "up")]
+    Update {
         /// Package names to upgrade, or "all" for all packages (supports wildcards *)
         names: Vec<String>,
 
@@ -74,8 +59,7 @@ pub enum Commands {
     },
 
     /// Delete installed packages
-    #[command(visible_alias = "rm")]
-    Delete {
+    Del {
         /// Package names to delete (supports wildcards *)
         names: Vec<String>,
 
@@ -88,15 +72,48 @@ pub enum Commands {
         force: bool,
     },
 
-    /// Set up PATH environment variable
-    SetupPath {
-        /// Show instructions without modifying PATH
-        #[arg(long)]
-        dry_run: bool,
+    /// Initialize WenPM (create directories and set up PATH)
+    Init,
+}
+
+#[derive(Subcommand)]
+pub enum SourceCommands {
+    /// Add packages from GitHub repository URLs
+    Add {
+        /// GitHub repository URLs (can specify multiple)
+        urls: Vec<String>,
     },
 
-    /// Initialize WenPM (create directories and manifests)
-    Init,
+    /// Delete packages from sources
+    Del {
+        /// Package names or URLs to delete
+        names: Vec<String>,
+    },
+
+    /// Import packages from a file or URL
+    Import {
+        /// Path to file or URL containing repository URLs (one per line)
+        source: String,
+    },
+
+    /// Export package URLs
+    Export {
+        /// Output file path (prints to stdout if not specified)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
+
+    /// Update package metadata from sources
+    Update,
+
+    /// List available packages from sources
+    List,
+
+    /// Show package information
+    Info {
+        /// Package names to show (supports wildcards *)
+        names: Vec<String>,
+    },
 }
 
 impl Cli {

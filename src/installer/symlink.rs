@@ -1,7 +1,10 @@
 //! Symlink creation for Unix systems
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::Path;
+
+#[cfg(unix)]
+use anyhow::Context;
 
 /// Create a symlink (Unix only)
 #[cfg(unix)]

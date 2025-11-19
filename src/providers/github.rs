@@ -1,10 +1,9 @@
 //! GitHub provider implementation
 
 use super::base::SourceProvider;
-use crate::core::{BinaryAsset, BinarySelector, Package, Platform, PlatformBinary};
+use crate::core::{BinaryAsset, BinarySelector, Package, PlatformBinary};
 use crate::utils::HttpClient;
 use anyhow::{Context, Result};
-use chrono::Utc;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -66,6 +65,13 @@ impl GitHubProvider {
         self.http
             .get_json(&url)
             .with_context(|| format!("Failed to fetch repo info for {}/{}", owner, repo))
+    }
+
+    /// Fetch latest version for a repository
+    pub fn fetch_latest_version(&self, repo_url: &str) -> Result<String> {
+        let (owner, repo) = self.parse_github_url(repo_url)?;
+        let release = self.fetch_latest_release(&owner, &repo)?;
+        Ok(release.tag_name.trim_start_matches('v').to_string())
     }
 }
 
@@ -134,15 +140,14 @@ impl SourceProvider for GitHubProvider {
             repo: url.to_string(),
             homepage: Some(repo_info.html_url),
             license: repo_info.license.map(|l| l.name),
-            latest: release.tag_name.trim_start_matches('v').to_string(),
-            updated_at: Utc::now(),
             platforms,
         };
 
+        let version = release.tag_name.trim_start_matches('v').to_string();
         log::info!(
             "✓ Found {} v{} with {} platform(s)",
             package.name,
-            package.latest,
+            version,
             package.platforms.len()
         );
 

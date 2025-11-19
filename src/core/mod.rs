@@ -11,4 +11,4 @@ pub use manifest::{
     InstalledManifest, InstalledPackage, Package, PlatformBinary, SourceManifest,
 };
 pub use paths::WenPaths;
-pub use platform::{Arch, BinaryAsset, BinarySelector, Os, Platform};
+pub use platform::{BinaryAsset, BinarySelector, Platform};

@@ -14,7 +14,7 @@ pub fn run(patterns: Vec<String>) -> Result<()> {
 
     if manifest.packages.is_empty() {
         println!("{}", "No packages in sources".yellow());
-        println!("Add packages with: wenpm add <github-url>");
+        println!("Add packages with: wenpm source add <github-url>");
         return Ok(());
     }
 
@@ -66,9 +66,8 @@ pub fn run(patterns: Vec<String>) -> Result<()> {
     );
     println!();
     println!(
-        "{:<20} {:<12} {:<10} {}",
+        "{:<20} {:<10} {}",
         "NAME".bold(),
-        "VERSION".bold(),
         "SIZE".bold(),
         "DESCRIPTION".bold()
     );
@@ -85,11 +84,10 @@ pub fn run(patterns: Vec<String>) -> Result<()> {
         let size_mb = platform_binary.size as f64 / 1_000_000.0;
 
         println!(
-            "{:<20} {:<12} {:>8.1} MB  {}",
+            "{:<20} {:>8.1} MB  {}",
             pkg.name.green(),
-            pkg.latest,
             size_mb,
-            truncate(&pkg.description, 40)
+            truncate(&pkg.description, 50)
         );
     }
 

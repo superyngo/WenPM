@@ -1,8 +1,16 @@
 //! Initialize WenPM
 
 use crate::core::Config;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use colored::Colorize;
+use std::env;
+use std::path::PathBuf;
+
+#[cfg(not(windows))]
+use std::fs::{self, OpenOptions};
+
+#[cfg(not(windows))]
+use std::io::Write;
 
 /// Initialize WenPM (create directories and manifests)
 pub fn run() -> Result<()> {
@@ -13,6 +21,16 @@ pub fn run() -> Result<()> {
     if config.is_initialized() {
         println!("{}", "✓ WenPM is already initialized".green());
         println!("  Root: {}", config.paths().root().display());
+
+        // Check if PATH is already configured
+        if is_in_path(config.paths().bin_dir())? {
+            println!("{}", "✓ WenPM bin directory is in PATH".green());
+        } else {
+            println!("{}", "⚠ WenPM bin directory is not in PATH".yellow());
+            println!();
+            setup_path(&config)?;
+        }
+
         return Ok(());
     }
 
@@ -30,10 +48,202 @@ pub fn run() -> Result<()> {
     println!("  Sources:   {}", config.paths().sources_json().display());
     println!("  Installed: {}", config.paths().installed_json().display());
     println!();
+
+    // Set up PATH
+    setup_path(&config)?;
+
+    println!();
     println!("{}", "Next steps:".bold());
-    println!("  1. Add packages: wenpm add <github-url>");
-    println!("  2. Install:      wenpm install <package-name>");
-    println!("  3. Set up PATH:  wenpm setup-path");
+    println!("  1. Add package sources:  wenpm source add <github-url>");
+    println!("  2. List available:       wenpm source list");
+    println!("  3. Install packages:     wenpm add <package-name>");
 
     Ok(())
+}
+
+/// Set up PATH for WenPM bin directory
+fn setup_path(config: &Config) -> Result<()> {
+    let bin_dir = config.paths().bin_dir();
+    let bin_dir_str = bin_dir.to_string_lossy();
+
+    println!("{}", "Setting up PATH...".cyan());
+
+    #[cfg(windows)]
+    {
+        setup_path_windows(&bin_dir_str)?;
+    }
+
+    #[cfg(not(windows))]
+    {
+        setup_path_unix(&bin_dir_str)?;
+    }
+
+    Ok(())
+}
+
+/// Set up PATH on Windows (modify user environment variable)
+#[cfg(windows)]
+fn setup_path_windows(bin_dir: &str) -> Result<()> {
+    use std::process::Command;
+
+    // Use PowerShell to add to user PATH
+    let ps_script = format!(
+        r#"
+        $oldPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        if ($oldPath -notlike '*{}*') {{
+            $newPath = $oldPath + ';{}'
+            [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
+            Write-Output 'Added'
+        }} else {{
+            Write-Output 'Already exists'
+        }}
+        "#,
+        bin_dir, bin_dir
+    );
+
+    let output = Command::new("powershell")
+        .args(&["-NoProfile", "-Command", &ps_script])
+        .output()
+        .context("Failed to execute PowerShell command")?;
+
+    let result = String::from_utf8_lossy(&output.stdout);
+
+    if result.contains("Added") {
+        println!("{}", "✓ Added WenPM bin directory to user PATH".green());
+        println!();
+        println!("{}", "IMPORTANT:".yellow().bold());
+        println!("  Please restart your terminal or command prompt");
+        println!("  for the PATH changes to take effect.");
+    } else if result.contains("Already exists") {
+        println!("{}", "✓ WenPM bin directory is already in PATH".green());
+    } else if !output.status.success() {
+        println!("{}", "⚠ Failed to automatically update PATH".yellow());
+        println!();
+        println!("Please manually add the following to your PATH:");
+        println!("  {}", bin_dir.cyan());
+    }
+
+    Ok(())
+}
+
+/// Set up PATH on Unix-like systems (add to shell config)
+#[cfg(not(windows))]
+fn setup_path_unix(bin_dir: &str) -> Result<()> {
+    let home = dirs::home_dir().context("Failed to determine home directory")?;
+
+    // Determine which shell configs to update
+    let shell_configs = detect_shell_configs(&home);
+
+    if shell_configs.is_empty() {
+        println!("{}", "⚠ No shell configuration files found".yellow());
+        println!();
+        println!("Please manually add the following to your shell configuration:");
+        println!("  export PATH=\"{}:$PATH\"", bin_dir.cyan());
+        return Ok(());
+    }
+
+    let export_line = format!("\n# WenPM\nexport PATH=\"{}:$PATH\"\n", bin_dir);
+
+    let mut updated_files = Vec::new();
+    let mut skipped_files = Vec::new();
+
+    for config_path in shell_configs {
+        match update_shell_config(&config_path, &export_line, bin_dir) {
+            Ok(true) => updated_files.push(config_path),
+            Ok(false) => skipped_files.push(config_path),
+            Err(e) => {
+                println!("  {} Failed to update {}: {}",
+                    "⚠".yellow(),
+                    config_path.display(),
+                    e
+                );
+            }
+        }
+    }
+
+    if !updated_files.is_empty() {
+        println!("{}", "✓ Updated shell configuration files:".green());
+        for path in &updated_files {
+            println!("  • {}", path.display());
+        }
+        println!();
+        println!("{}", "IMPORTANT:".yellow().bold());
+        println!("  Run the following command to apply changes:");
+        println!("  source ~/{}", updated_files[0].file_name().unwrap().to_string_lossy().cyan());
+        println!();
+        println!("  Or restart your terminal");
+    }
+
+    if !skipped_files.is_empty() {
+        println!("{}", "✓ WenPM is already configured in:".green());
+        for path in &skipped_files {
+            println!("  • {}", path.display());
+        }
+    }
+
+    Ok(())
+}
+
+/// Detect available shell configuration files
+#[cfg(not(windows))]
+fn detect_shell_configs(home: &PathBuf) -> Vec<PathBuf> {
+    let mut configs = Vec::new();
+
+    // Check for common shell configs
+    let candidates = vec![
+        ".bashrc",
+        ".bash_profile",
+        ".zshrc",
+        ".profile",
+    ];
+
+    for candidate in candidates {
+        let path = home.join(candidate);
+        if path.exists() {
+            configs.push(path);
+        }
+    }
+
+    // If no configs found, try to create .profile
+    if configs.is_empty() {
+        let profile = home.join(".profile");
+        configs.push(profile);
+    }
+
+    configs
+}
+
+/// Update a shell configuration file
+#[cfg(not(windows))]
+fn update_shell_config(config_path: &PathBuf, export_line: &str, bin_dir: &str) -> Result<bool> {
+    // Check if already configured
+    if config_path.exists() {
+        let content = fs::read_to_string(config_path)
+            .with_context(|| format!("Failed to read {}", config_path.display()))?;
+
+        if content.contains(bin_dir) {
+            return Ok(false); // Already configured
+        }
+    }
+
+    // Append to file
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(config_path)
+        .with_context(|| format!("Failed to open {}", config_path.display()))?;
+
+    file.write_all(export_line.as_bytes())
+        .with_context(|| format!("Failed to write to {}", config_path.display()))?;
+
+    Ok(true)
+}
+
+/// Check if a directory is in PATH
+fn is_in_path(dir: PathBuf) -> Result<bool> {
+    let path_var = env::var("PATH").unwrap_or_default();
+    let dir_str = dir.to_string_lossy();
+
+    Ok(path_var.split(if cfg!(windows) { ';' } else { ':' })
+        .any(|p| p == dir_str.as_ref()))
 }

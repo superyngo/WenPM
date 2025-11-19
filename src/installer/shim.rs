@@ -6,7 +6,7 @@ use std::path::Path;
 
 /// Create a .cmd shim (Windows only)
 #[cfg(windows)]
-pub fn create_shim(target: &Path, shim: &Path, name: &str) -> Result<()> {
+pub fn create_shim(target: &Path, shim: &Path, _name: &str) -> Result<()> {
     log::debug!("Creating shim: {}", shim.display());
 
     // Create shim content

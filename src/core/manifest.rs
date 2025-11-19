@@ -44,12 +44,6 @@ pub struct Package {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub license: Option<String>,
 
-    /// Latest version
-    pub latest: String,
-
-    /// Last updated timestamp
-    pub updated_at: DateTime<Utc>,
-
     /// Platform-specific binaries
     /// Key format: "{os}-{arch}" or "{os}-{arch}-{variant}"
     /// Examples: "windows-x86_64", "linux-x86_64-musl", "macos-aarch64"
@@ -61,9 +55,6 @@ pub struct Package {
 pub struct SourceManifest {
     /// List of available packages
     pub packages: Vec<Package>,
-
-    /// Last updated timestamp for the entire manifest
-    pub last_updated: DateTime<Utc>,
 }
 
 impl SourceManifest {
@@ -71,7 +62,6 @@ impl SourceManifest {
     pub fn new() -> Self {
         Self {
             packages: Vec::new(),
-            last_updated: Utc::now(),
         }
     }
 
@@ -85,14 +75,13 @@ impl SourceManifest {
         self.packages.iter_mut().find(|p| p.name == name)
     }
 
-    /// Add or update a package
-    pub fn upsert_package(&mut self, package: Package) {
-        if let Some(existing) = self.find_package_mut(&package.name) {
-            *existing = package;
-        } else {
-            self.packages.push(package);
+    /// Add a package
+    pub fn add_package(&mut self, package: Package) -> bool {
+        if self.find_package(&package.name).is_some() {
+            return false; // Package already exists
         }
-        self.last_updated = Utc::now();
+        self.packages.push(package);
+        true
     }
 
     /// Remove a package by name
@@ -194,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn test_source_manifest_upsert() {
+    fn test_source_manifest_add_package() {
         let mut manifest = SourceManifest::new();
 
         let package = Package {
@@ -203,21 +192,17 @@ mod tests {
             repo: "https://github.com/test/test".to_string(),
             homepage: None,
             license: Some("MIT".to_string()),
-            latest: "1.0.0".to_string(),
-            updated_at: Utc::now(),
             platforms: HashMap::new(),
         };
 
-        manifest.upsert_package(package.clone());
+        // First add should succeed
+        assert!(manifest.add_package(package.clone()));
         assert_eq!(manifest.packages.len(), 1);
         assert_eq!(manifest.find_package("test").unwrap().name, "test");
 
-        // Update
-        let mut updated = package;
-        updated.latest = "2.0.0".to_string();
-        manifest.upsert_package(updated);
+        // Second add should fail (duplicate)
+        assert!(!manifest.add_package(package));
         assert_eq!(manifest.packages.len(), 1);
-        assert_eq!(manifest.find_package("test").unwrap().latest, "2.0.0");
     }
 
     #[test]

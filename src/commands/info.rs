@@ -1,6 +1,7 @@
 //! Info command implementation
 
 use crate::core::{Config, Platform};
+use crate::providers::GitHubProvider;
 use anyhow::Result;
 use colored::Colorize;
 use glob::Pattern;
@@ -13,9 +14,12 @@ pub fn run(patterns: Vec<String>) -> Result<()> {
     let sources = config.get_or_create_sources()?;
     let installed = config.get_or_create_installed()?;
 
+    // Create GitHub provider to fetch versions
+    let github = GitHubProvider::new()?;
+
     if sources.packages.is_empty() {
         println!("{}", "No packages in sources".yellow());
-        println!("Add packages with: wenpm add <github-url>");
+        println!("Add packages with: wenpm source add <github-url>");
         return Ok(());
     }
 
@@ -70,7 +74,12 @@ pub fn run(patterns: Vec<String>) -> Result<()> {
             println!("{}: {}", "License".bold(), license);
         }
 
-        println!("{}: {}", "Latest Version".bold(), pkg.latest);
+        // Fetch latest version
+        let latest_version = github
+            .fetch_latest_version(&pkg.repo)
+            .unwrap_or_else(|_| "unknown".to_string());
+
+        println!("{}: {}", "Latest Version".bold(), latest_version);
 
         // Check if installed
         if let Some(inst_pkg) = installed.get_package(&pkg.name) {
@@ -78,7 +87,7 @@ pub fn run(patterns: Vec<String>) -> Result<()> {
                 "{}: {} ({})",
                 "Installed Version".bold(),
                 inst_pkg.version.green(),
-                if inst_pkg.version == pkg.latest {
+                if inst_pkg.version == latest_version {
                     "up to date".green()
                 } else {
                     "upgrade available".yellow()

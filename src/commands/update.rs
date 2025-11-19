@@ -1,75 +1,112 @@
-//! Update command implementation
+//! Update (Upgrade) command implementation
 
+use crate::commands::add;
 use crate::core::Config;
-use crate::providers::{GitHubProvider, SourceProvider};
+use crate::providers::GitHubProvider;
 use anyhow::Result;
 use colored::Colorize;
 
-/// Update package metadata from sources
-pub fn run() -> Result<()> {
+/// Upgrade installed packages
+pub fn run(names: Vec<String>, yes: bool) -> Result<()> {
+    // Handle "wenpm update self"
+    if names.len() == 1 && names[0] == "self" {
+        return upgrade_self();
+    }
+
     let config = Config::new()?;
 
-    // Load manifest
-    let mut manifest = config.get_or_create_sources()?;
+    // Load manifests
+    let sources = config.get_or_create_sources()?;
+    let installed = config.get_or_create_installed()?;
 
-    if manifest.packages.is_empty() {
-        println!("{}", "No packages in sources to update".yellow());
-        println!("Add packages with: wenpm add <github-url>");
+    if installed.packages.is_empty() {
+        println!("{}", "No packages installed".yellow());
         return Ok(());
     }
 
-    println!("{} {} package(s)...\n", "Updating".cyan(), manifest.packages.len());
-
-    // Create provider
+    // Create GitHub provider to fetch latest versions
     let github = GitHubProvider::new()?;
 
-    // Track results
-    let mut updated = 0;
-    let mut unchanged = 0;
-    let mut failed = 0;
+    // Determine which packages to upgrade
+    let to_upgrade: Vec<String> = if names.is_empty() || (names.len() == 1 && names[0] == "all") {
+        // List upgradeable packages
+        let upgradeable = find_upgradeable(&sources, &installed, &github)?;
 
-    // Update each package
-    for pkg in &mut manifest.packages {
-        print!("  {} {} ... ", "Updating".cyan(), pkg.name);
+        if upgradeable.is_empty() {
+            println!("{}", "All packages are up to date".green());
+            return Ok(());
+        }
 
-        match github.fetch_package(&pkg.repo) {
-            Ok(new_pkg) => {
-                if new_pkg.latest != pkg.latest {
-                    println!(
-                        "{} {} -> {}",
-                        "Updated".green(),
-                        pkg.latest,
-                        new_pkg.latest
-                    );
-                    *pkg = new_pkg;
-                    updated += 1;
-                } else {
-                    println!("{} v{}", "Up to date".green(), pkg.latest);
-                    unchanged += 1;
+        println!("{}", "Packages to upgrade:".bold());
+        for (name, current, latest) in &upgradeable {
+            println!("  • {} {} -> {}", name, current.yellow(), latest.green());
+        }
+        println!();
+
+        upgradeable.into_iter().map(|(name, _, _)| name).collect()
+    } else {
+        names
+    };
+
+    // Use add command to upgrade (reinstall)
+    add::run(to_upgrade, yes)
+}
+
+/// Find upgradeable packages
+fn find_upgradeable(
+    sources: &crate::core::SourceManifest,
+    installed: &crate::core::InstalledManifest,
+    github: &GitHubProvider,
+) -> Result<Vec<(String, String, String)>> {
+    let mut upgradeable = Vec::new();
+
+    for (name, inst_pkg) in &installed.packages {
+        if let Some(src_pkg) = sources.find_package(name) {
+            // Fetch latest version from GitHub
+            if let Ok(latest_version) = github.fetch_latest_version(&src_pkg.repo) {
+                if inst_pkg.version != latest_version {
+                    upgradeable.push((
+                        name.clone(),
+                        inst_pkg.version.clone(),
+                        latest_version,
+                    ));
                 }
-            }
-            Err(e) => {
-                println!("{} {}", "Failed".red(), e);
-                failed += 1;
             }
         }
     }
 
-    // Save manifest
-    config.save_sources(&manifest)?;
+    Ok(upgradeable)
+}
 
-    // Summary
+/// Upgrade wenpm itself
+fn upgrade_self() -> Result<()> {
+    println!("{}", "Upgrading wenpm...".cyan());
+
+    // Get current version
+    let current_version = env!("CARGO_PKG_VERSION");
+    println!("Current version: {}", current_version);
+
+    // Fetch latest release from GitHub
+    let provider = GitHubProvider::new()?;
+    let latest_version = provider.fetch_latest_version("https://github.com/superyngo/WenPM")?;
+
+    println!("Latest version: {}", latest_version);
+
+    if current_version == latest_version {
+        println!("{}", "✓ Already up to date".green());
+        return Ok(());
+    }
+
     println!();
-    println!("{}", "Summary:".bold());
-    if updated > 0 {
-        println!("  {} {} package(s) updated", "✓".green(), updated);
-    }
-    if unchanged > 0 {
-        println!("  {} {} package(s) unchanged", "•".cyan(), unchanged);
-    }
-    if failed > 0 {
-        println!("  {} {} package(s) failed", "✗".red(), failed);
-    }
+    println!(
+        "{}",
+        "Self-upgrade functionality will be available in the next update".yellow()
+    );
+    println!("For now, please manually download and install the latest version from:");
+    println!(
+        "  {}",
+        "https://github.com/superyngo/WenPM/releases/latest".cyan()
+    );
 
     Ok(())
 }
