@@ -130,26 +130,91 @@ wenpm bucket add wenpm https://raw.githubusercontent.com/superyngo/wenpm-bucket/
 
 ### Creating Your Own Bucket
 
+You can create custom buckets to distribute your own package collections. See the [official WenPM bucket repository](https://github.com/superyngo/wenpm-bucket) for a complete example.
+
+#### Bucket Structure
+
 Create a `manifest.json` with the following structure:
 
 ```json
 {
   "name": "my-bucket",
   "description": "My custom bucket",
+  "version": "1.0.0",
   "packages": [
     {
       "name": "my-tool",
       "repo": "username/repo",
-      "description": "Tool description"
+      "description": "Tool description",
+      "homepage": "https://example.com",
+      "license": "MIT"
     }
   ]
 }
 ```
 
-Host it on GitHub or any web server, then add it:
+#### Required Fields
+
+- `name`: Unique bucket identifier
+- `description`: Brief description of the bucket
+- `packages`: Array of package definitions
+  - `name`: Package name (used in commands)
+  - `repo`: GitHub repository in `owner/repo` format
+  - `description`: Brief package description
+
+#### Optional Fields
+
+- `version`: Bucket version (for tracking updates)
+- `homepage`: Project homepage URL
+- `license`: Package license
+- `tags`: Array of tags for categorization
+
+#### Hosting Your Bucket
+
+**GitHub (Recommended)**:
+```bash
+# Create a new repository
+# Add manifest.json to the repository
+# Use raw.githubusercontent.com URL
+wenpm bucket add my-bucket https://raw.githubusercontent.com/username/my-bucket/main/manifest.json
+```
+
+**Other Hosting**:
+- Any web server that serves JSON with HTTPS
+- GitHub Gists
+- CDN services
+
+#### Example: Official WenPM Bucket
+
+The official bucket is maintained at: https://github.com/superyngo/wenpm-bucket
+
+It includes curated packages with:
+- Verified working binaries across platforms
+- Updated package metadata
+- Categorized by tool type
+- Regular updates and maintenance
+
+You can use it as a template for creating your own bucket:
 
 ```bash
-wenpm bucket add my-bucket https://example.com/manifest.json
+# Clone the official bucket as a template
+git clone https://github.com/superyngo/wenpm-bucket my-bucket
+cd my-bucket
+# Edit manifest.json with your packages
+# Commit and push to your repository
+```
+
+#### Testing Your Bucket
+
+```bash
+# Add your bucket locally
+wenpm bucket add test-bucket https://example.com/manifest.json
+
+# Verify packages are listed
+wenpm search <package-name>
+
+# Test installation
+wenpm add <package-name>
 ```
 
 ## Platform Support
@@ -175,6 +240,40 @@ WenPM supports the following platforms:
 4. **Download**: Downloads and caches the binary
 5. **Installation**: Extracts and places the binary in `~/.wenpm/apps/<package>/`
 6. **Shim Creation**: Creates a shim/symlink in `~/.wenpm/bin/` for easy access
+
+## GitHub API Rate Limits
+
+WenPM uses the GitHub API to fetch package information and download binaries. Be aware of GitHub's API rate limits:
+
+### Rate Limit Overview
+
+| Authentication | Rate Limit | Impact |
+|---------------|------------|--------|
+| Unauthenticated | 60 requests/hour | Limited package searches and updates |
+| Authenticated | 5,000 requests/hour | Sufficient for normal usage |
+
+### Impact on WenPM Operations
+
+**Operations that consume API calls:**
+- `wenpm search <keyword>` - 1-2 calls per search
+- `wenpm add <package>` - 2 calls per package (release info + asset download)
+- `wenpm update` - 1 call per package source
+- `wenpm source add <url>` - 2 calls per source (validate repo + fetch releases)
+
+**Operations that don't consume API calls:**
+- `wenpm list` - Local only
+- `wenpm delete` - Local only
+- `wenpm bucket list/add/remove` - Local only
+- Bucket-based installs use cached package information
+
+### Recommendations
+
+1. **Use Buckets**: The bucket system caches package information, reducing API calls significantly
+2. **Run `wenpm update` periodically** rather than before each search
+3. **For heavy usage**: Consider authenticating with GitHub (future feature)
+4. **Rate limit exceeded?** Wait an hour or use buckets for cached package data
+
+The official WenPM bucket is updated regularly, so most users won't need to worry about rate limits when using bucket-based package management.
 
 ## Examples
 
