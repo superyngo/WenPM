@@ -8,12 +8,6 @@ use std::env;
 use std::io::{self, Write as IoWrite};
 use std::path::PathBuf;
 
-#[cfg(windows)]
-use crate::installer::shim::create_shim;
-
-#[cfg(unix)]
-use crate::installer::symlink::create_symlink;
-
 #[cfg(not(windows))]
 use std::fs::{self, OpenOptions};
 
@@ -78,6 +72,62 @@ pub fn run(yes: bool) -> Result<()> {
     Ok(())
 }
 
+/// Create wenpm shim with absolute path (Windows)
+#[cfg(windows)]
+fn create_wenpm_shim(target: &PathBuf, shim: &PathBuf) -> Result<()> {
+    use std::fs;
+
+    log::debug!("Creating wenpm shim: {}", shim.display());
+
+    // Use absolute path in shim to avoid relative path issues
+    let shim_content = format!("@echo off\r\n\"{}\" %*\r\n", target.display());
+
+    // Create parent directory
+    if let Some(parent) = shim.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    // Remove existing shim if it exists
+    if shim.exists() {
+        fs::remove_file(shim)
+            .with_context(|| format!("Failed to remove existing shim: {}", shim.display()))?;
+    }
+
+    // Write shim file
+    fs::write(shim, shim_content)
+        .with_context(|| format!("Failed to create shim: {}", shim.display()))?;
+
+    Ok(())
+}
+
+/// Create wenpm symlink (Unix)
+#[cfg(unix)]
+fn create_wenpm_symlink(target: &PathBuf, link: &PathBuf) -> Result<()> {
+    use std::os::unix::fs::symlink;
+
+    log::debug!(
+        "Creating wenpm symlink: {} -> {}",
+        link.display(),
+        target.display()
+    );
+
+    // Remove existing symlink if it exists
+    if link.exists() || link.is_symlink() {
+        std::fs::remove_file(link)
+            .with_context(|| format!("Failed to remove existing symlink: {}", link.display()))?;
+    }
+
+    // Create parent directory
+    if let Some(parent) = link.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    symlink(target, link)
+        .with_context(|| format!("Failed to create symlink: {}", link.display()))?;
+
+    Ok(())
+}
+
 /// Check and setup wenpm executable if missing (for already initialized)
 fn check_and_setup_wenpm_executable(config: &Config) -> Result<()> {
     let bin_dir = config.paths().bin_dir();
@@ -88,11 +138,11 @@ fn check_and_setup_wenpm_executable(config: &Config) -> Result<()> {
     #[cfg(unix)]
     let wenpm_bin = bin_dir.join("wenpm");
 
-    // Check if wenpm executable/shim exists
+    // Check if wenpm shim/symlink exists
     if wenpm_bin.exists() {
-        println!("{}", "✓ WenPM executable is in bin directory".green());
+        println!("{}", "✓ WenPM shim is in bin directory".green());
     } else {
-        println!("{}", "⚠ WenPM executable is not in bin directory".yellow());
+        println!("{}", "⚠ WenPM shim is not in bin directory".yellow());
         println!();
         setup_wenpm_executable(config)?;
     }
@@ -109,13 +159,13 @@ fn setup_wenpm_executable(config: &Config) -> Result<()> {
     {
         let shim_path = bin_dir.join("wenpm.cmd");
 
-        match create_shim(&current_exe, &shim_path, "wenpm") {
+        match create_wenpm_shim(&current_exe, &shim_path) {
             Ok(_) => {
                 println!("{}", "✓ Created wenpm shim in bin directory".green());
             }
             Err(e) => {
                 println!("{} Failed to create wenpm shim: {}", "⚠".yellow(), e);
-                println!("  You can manually copy wenpm.exe to the bin directory later");
+                println!("  You can manually create a shim to wenpm.exe later");
             }
         }
     }
@@ -124,13 +174,13 @@ fn setup_wenpm_executable(config: &Config) -> Result<()> {
     {
         let symlink_path = bin_dir.join("wenpm");
 
-        match create_symlink(&current_exe, &symlink_path) {
+        match create_wenpm_symlink(&current_exe, &symlink_path) {
             Ok(_) => {
                 println!("{}", "✓ Created wenpm symlink in bin directory".green());
             }
             Err(e) => {
                 println!("{} Failed to create wenpm symlink: {}", "⚠".yellow(), e);
-                println!("  You can manually copy or link wenpm to the bin directory later");
+                println!("  You can manually link wenpm to the bin directory later");
             }
         }
     }
