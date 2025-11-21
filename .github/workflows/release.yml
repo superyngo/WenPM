@@ -35,10 +35,6 @@ jobs:
             artifact_name: wenpm
             asset_name: wenpm-linux-x86_64-musl
           - os: ubuntu-latest
-            target: i686-unknown-linux-musl
-            artifact_name: wenpm
-            asset_name: wenpm-linux-i686-musl
-          - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             artifact_name: wenpm
             asset_name: wenpm-linux-armv7
@@ -54,6 +50,8 @@ jobs:
             target: aarch64-unknown-linux-musl
             artifact_name: wenpm
             asset_name: wenpm-linux-aarch64-musl
+            cflags: "-U_FORTIFY_SOURCE"
+            cc: "aarch64-linux-gnu-gcc"
           # Windows builds - 使用溫和優化以避免防毒軟體誤報
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -95,7 +93,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install 32-bit libraries (Linux i686 only)
-        if: matrix.target == 'i686-unknown-linux-gnu' || matrix.target == 'i686-unknown-linux-musl'
+        if: matrix.target == 'i686-unknown-linux-gnu'
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
@@ -159,6 +157,8 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
         env:
           RUSTFLAGS: ${{ matrix.rustflags }}
+          CFLAGS: ${{ matrix.cflags }}
+          CC: ${{ matrix.cc }}
 
       - name: Strip binary (Linux and macOS - x86)
         if: matrix.os != 'windows-latest' && matrix.target != 'armv7-unknown-linux-gnueabihf' && matrix.target != 'armv7-unknown-linux-musleabihf' && matrix.target != 'aarch64-unknown-linux-gnu' && matrix.target != 'aarch64-unknown-linux-musl'
