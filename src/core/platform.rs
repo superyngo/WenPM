@@ -52,7 +52,9 @@ impl Os {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Arch {
     X86_64,
+    I686,
     Aarch64,
+    Armv7,
 }
 
 impl Arch {
@@ -60,8 +62,12 @@ impl Arch {
     pub fn current() -> Self {
         if cfg!(target_arch = "x86_64") {
             Arch::X86_64
+        } else if cfg!(target_arch = "x86") {
+            Arch::I686
         } else if cfg!(target_arch = "aarch64") {
             Arch::Aarch64
+        } else if cfg!(target_arch = "arm") {
+            Arch::Armv7
         } else {
             panic!("Unsupported architecture")
         }
@@ -71,7 +77,9 @@ impl Arch {
     pub fn keywords(&self) -> &[&str] {
         match self {
             Arch::X86_64 => &["x86_64", "x64", "amd64"],
+            Arch::I686 => &["i686", "x86", "i386", "win32"],
             Arch::Aarch64 => &["aarch64", "arm64"],
+            Arch::Armv7 => &["armv7", "armhf"],
         }
     }
 
@@ -79,7 +87,9 @@ impl Arch {
     pub fn as_str(&self) -> &str {
         match self {
             Arch::X86_64 => "x86_64",
+            Arch::I686 => "i686",
             Arch::Aarch64 => "aarch64",
+            Arch::Armv7 => "armv7",
         }
     }
 }
@@ -255,9 +265,12 @@ impl BinarySelector {
         // Try all common platform combinations
         let test_platforms = vec![
             Platform::new(Os::Windows, Arch::X86_64),
+            Platform::new(Os::Windows, Arch::I686),
             Platform::new(Os::Windows, Arch::Aarch64),
             Platform::new(Os::Linux, Arch::X86_64),
+            Platform::new(Os::Linux, Arch::I686),
             Platform::new(Os::Linux, Arch::Aarch64),
+            Platform::new(Os::Linux, Arch::Armv7),
             Platform::new(Os::MacOS, Arch::X86_64),
             Platform::new(Os::MacOS, Arch::Aarch64),
         ];
@@ -295,7 +308,10 @@ mod tests {
         let platform = Platform::current();
         println!("Current platform: {}", platform);
         assert!(matches!(platform.os, Os::Windows | Os::Linux | Os::MacOS));
-        assert!(matches!(platform.arch, Arch::X86_64 | Arch::Aarch64));
+        assert!(matches!(
+            platform.arch,
+            Arch::X86_64 | Arch::I686 | Arch::Aarch64 | Arch::Armv7
+        ));
     }
 
     #[test]
