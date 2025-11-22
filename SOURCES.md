@@ -1,6 +1,6 @@
-# WenPM Package Sources
+# Wenget Package Sources
 
-This directory contains curated lists of popular CLI tools from GitHub that can be installed via WenPM.
+This directory contains curated lists of popular CLI tools from GitHub that can be installed via Wenget.
 
 ## Available Source Lists
 
@@ -13,9 +13,9 @@ Essential CLI tools that every developer should have. Includes:
 - **Development**: tokei, hyperfine, delta
 - **Git**: gitui
 - **Shell**: starship
-- **WenPM Official**: WenPM, cate, wedi
+- **Wenget Official**: Wenget, cate, wedi
 
-### 📚 `wenpm-sources.txt`
+### 📚 `wenget-sources.txt`
 Comprehensive list of popular CLI tools including:
 - All tools from essential list
 - Additional utilities: nushell, xh, ouch, hexyl
@@ -27,23 +27,23 @@ Comprehensive list of popular CLI tools including:
 
 ### Import all sources at once:
 
-WenPM supports two import formats:
+Wenget supports two import formats:
 - **txt format** - URL list (requires GitHub API calls)
 - **json format** - Complete package info (no API calls, faster!)
 
 ```bash
 # Import essential tools (recommended for beginners)
 # txt format - will fetch package info from GitHub
-wenpm source import sources-essential.txt
+wenget source import sources-essential.txt
 
 # json format - instant import with complete package info
-wenpm source import sources-essential.json
+wenget source import sources-essential.json
 
 # Import comprehensive list
-wenpm source import wenpm-sources.txt
+wenget source import wenget-sources.txt
 
 # Import from URL (if hosted on GitHub)
-wenpm source import https://raw.githubusercontent.com/superyngo/WenPM/main/sources-essential.json
+wenget source import https://raw.githubusercontent.com/superyngo/Wenget/main/sources-essential.json
 ```
 
 **💡 Pro Tip:** Use JSON format to avoid GitHub API rate limits! JSON files contain complete package information and import instantly without fetching from GitHub.
@@ -52,13 +52,13 @@ wenpm source import https://raw.githubusercontent.com/superyngo/WenPM/main/sourc
 
 ```bash
 # Export as txt (URLs only)
-wenpm source export -o my-sources.txt
+wenget source export -o my-sources.txt
 
 # Export as JSON (complete package info - recommended for sharing!)
-wenpm source export -o my-sources.json -f json
+wenget source export -o my-sources.json -f json
 
 # Export to stdout
-wenpm source export
+wenget source export
 ```
 
 ### Using Buckets (Remote Manifest Sources):
@@ -75,22 +75,22 @@ wenpm source export
 
 ```bash
 # Add a bucket (official or community)
-wenpm bucket add official https://raw.githubusercontent.com/user/wenpm-bucket/main/manifest.json
+wenget bucket add official https://raw.githubusercontent.com/user/wenget-bucket/main/manifest.json
 
 # List all buckets
-wenpm bucket list
+wenget bucket list
 
 # Remove a bucket
-wenpm bucket del official
+wenget bucket del official
 
 # Refresh cache from all buckets
-wenpm bucket refresh
+wenget bucket refresh
 ```
 
 #### How buckets work:
 
 1. **Bucket sources** use the same `manifest.json` format as local sources
-2. When you add a bucket, WenPM fetches its manifest and caches it locally
+2. When you add a bucket, Wenget fetches its manifest and caches it locally
 3. All package operations (search, list, install) use the **cached manifest** (includes local + bucket packages)
 4. **Local sources** always take priority over bucket sources
 5. Cache automatically refreshes after 24 hours or when you run `bucket refresh`
@@ -99,14 +99,14 @@ wenpm bucket refresh
 
 1. Export your sources as JSON:
    ```bash
-   wenpm source export -o manifest.json -f json
+   wenget source export -o manifest.json -f json
    ```
 
 2. Host the `manifest.json` file on GitHub or any public URL
 
 3. Users can add your bucket:
    ```bash
-   wenpm bucket add your-bucket https://your-url/manifest.json
+   wenget bucket add your-bucket https://your-url/manifest.json
    ```
 
 **💡 Pro Tip:** Buckets are perfect for teams or organizations to share curated package collections without requiring users to import individual packages!
@@ -115,13 +115,13 @@ wenpm bucket refresh
 
 ```bash
 # List available packages
-wenpm source list
+wenget source list
 
 # Get package information
-wenpm source info ripgrep
+wenget source info ripgrep
 
 # Install packages
-wenpm add ripgrep fd bat
+wenget add ripgrep fd bat
 ```
 
 ## Tool Descriptions
@@ -191,12 +191,12 @@ To add a new tool to the sources list:
 
 - All tools listed here are open source and hosted on GitHub
 - Binary availability may vary by platform
-- Use `wenpm source info <package>` to check supported platforms
+- Use `wenget source info <package>` to check supported platforms
 - Some tools may require additional setup or configuration
 
 ## Package Manager Comparison
 
-WenPM focuses on installing pre-built binaries from GitHub releases, making it:
+Wenget focuses on installing pre-built binaries from GitHub releases, making it:
 - ✅ Fast (no compilation required)
 - ✅ Cross-platform (Windows, Linux, macOS)
 - ✅ Simple (just download and use)
@@ -205,5 +205,5 @@ WenPM focuses on installing pre-built binaries from GitHub releases, making it:
 ## Support
 
 For issues or questions:
-- WenPM: https://github.com/superyngo/WenPM/issues
+- Wenget: https://github.com/superyngo/Wenget/issues
 - Each tool has its own repository with documentation and issue tracker

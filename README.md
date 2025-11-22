@@ -1,8 +1,8 @@
-# WenPM - Wen Package Manager
+# Wenget - Wen Package Manager
 
 A cross-platform package manager for GitHub binaries, written in Rust.
 
-WenPM simplifies the installation and management of command-line tools and applications distributed through GitHub Releases. It automatically detects your platform, downloads the appropriate binaries, and manages them in an organized directory structure.
+Wenget simplifies the installation and management of command-line tools and applications distributed through GitHub Releases. It automatically detects your platform, downloads the appropriate binaries, and manages them in an organized directory structure.
 
 ## Features
 
@@ -10,7 +10,7 @@ WenPM simplifies the installation and management of command-line tools and appli
 - **🔄 Auto-update**: Always installs the latest version from GitHub Releases
 - **📦 Bucket System**: Organize packages using bucket manifests
 - **🌐 Cross-platform**: Windows, macOS, Linux (multiple architectures)
-- **📁 Organized Storage**: All packages in `~/.wenpm/` with proper structure
+- **📁 Organized Storage**: All packages in `~/.wenget/` with proper structure
 - **🔍 Smart Search**: Search packages across all configured buckets
 - **⚡ Fast Downloads**: Multi-threaded downloads with caching
 - **🎯 Platform Detection**: Automatically selects the correct binary for your system
@@ -19,81 +19,81 @@ WenPM simplifies the installation and management of command-line tools and appli
 
 ### Windows (PowerShell)
 ```powershell
-irm https://raw.githubusercontent.com/superyngo/WenPM/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/superyngo/Wenget/main/install.ps1 | iex
 ```
 
 ### Linux/macOS (Bash)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/superyngo/WenPM/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/superyngo/Wenget/main/install.sh | bash
 ```
 
 ### Manual Installation
 
-Download the latest release from [GitHub Releases](https://github.com/superyngo/WenPM/releases) and place it in your PATH, or build from source:
+Download the latest release from [GitHub Releases](https://github.com/superyngo/Wenget/releases) and place it in your PATH, or build from source:
 
 ```bash
-git clone https://github.com/superyngo/WenPM.git
-cd WenPM
+git clone https://github.com/superyngo/Wenget.git
+cd Wenget
 cargo build --release
 ```
 
-The binary will be at `target/release/wenpm` (or `wenpm.exe` on Windows).
+The binary will be at `target/release/wenget` (or `wenget.exe` on Windows).
 
 ## Quick Start
 
 ```bash
-# Initialize WenPM (done automatically with install scripts)
-wenpm init
+# Initialize Wenget (done automatically with install scripts)
+wenget init
 
-# Add the official WenPM bucket (if not added during init)
-wenpm bucket add wenpm https://raw.githubusercontent.com/superyngo/wenpm-bucket/main/manifest.json
+# Add the official Wenget bucket (if not added during init)
+wenget bucket add wenget https://raw.githubusercontent.com/superyngo/wenget-bucket/main/manifest.json
 
 # Search for packages
-wenpm search ripgrep
+wenget search ripgrep
 
 # Install a package
-wenpm add ripgrep
+wenget add ripgrep
 
 # List installed packages
-wenpm list
+wenget list
 
 # Update package metadata
-wenpm update
+wenget update
 
 # Delete a package
-wenpm delete ripgrep
+wenget delete ripgrep
 ```
 
 ## Commands
 
 ### Package Management
 
-- `wenpm add <name>...` - Install packages
-- `wenpm delete <name>...` - Uninstall packages
-  - `wenpm del self` - Uninstall WenPM itself
-- `wenpm list` - List installed packages
-- `wenpm search <keyword>` - Search available packages
-- `wenpm update` - Update package metadata from all buckets
+- `wenget add <name>...` - Install packages
+- `wenget delete <name>...` - Uninstall packages
+  - `wenget del self` - Uninstall Wenget itself
+- `wenget list` - List installed packages
+- `wenget search <keyword>` - Search available packages
+- `wenget update` - Update package metadata from all buckets
 
 ### Bucket Management
 
-- `wenpm bucket add <name> <url>` - Add a bucket
-- `wenpm bucket remove <name>` - Remove a bucket
-- `wenpm bucket list` - List all buckets
-- `wenpm bucket refresh` - Rebuild package cache
+- `wenget bucket add <name> <url>` - Add a bucket
+- `wenget bucket remove <name>` - Remove a bucket
+- `wenget bucket list` - List all buckets
+- `wenget bucket refresh` - Rebuild package cache
 
 ### Source Management (Legacy)
 
-- `wenpm source add <url>...` - Add package sources
-- `wenpm source list` - List package sources
-- `wenpm source export -o <file>` - Export sources
-- `wenpm source import <file>` - Import sources
+- `wenget source add <url>...` - Add package sources
+- `wenget source list` - List package sources
+- `wenget source export -o <file>` - Export sources
+- `wenget source import <file>` - Import sources
 
 ### System
 
-- `wenpm init` - Initialize WenPM directories and configuration
-- `wenpm --version` - Show version information
-- `wenpm --help` - Show help message
+- `wenget init` - Initialize Wenget directories and configuration
+- `wenget --version` - Show version information
+- `wenget --help` - Show help message
 
 ### Global Options
 
@@ -103,13 +103,13 @@ wenpm delete ripgrep
 ## Directory Structure
 
 ```
-~/.wenpm/
+~/.wenget/
 ├── apps/                  # Installed applications
-│   ├── wenpm/            # WenPM itself
+│   ├── wenget/            # Wenget itself
 │   └── <package>/        # Each installed package
 ├── bin/                   # Symlinks/shims (added to PATH)
-│   ├── wenpm.cmd         # WenPM shim (Windows)
-│   ├── wenpm             # WenPM symlink (Unix)
+│   ├── wenget.cmd         # Wenget shim (Windows)
+│   ├── wenget             # Wenget symlink (Unix)
 │   └── <package>.cmd     # Package shims
 ├── cache/                 # Download and package cache
 │   └── packages.json     # Cached package list
@@ -120,17 +120,17 @@ wenpm delete ripgrep
 
 ## Bucket System
 
-Buckets are collections of package manifests hosted online. The official WenPM bucket provides curated open-source tools.
+Buckets are collections of package manifests hosted online. The official Wenget bucket provides curated open-source tools.
 
 ### Official Bucket
 
 ```bash
-wenpm bucket add wenpm https://raw.githubusercontent.com/superyngo/wenpm-bucket/main/manifest.json
+wenget bucket add wenget https://raw.githubusercontent.com/superyngo/wenget-bucket/main/manifest.json
 ```
 
 ### Creating Your Own Bucket
 
-You can create custom buckets to distribute your own package collections. See the [official WenPM bucket repository](https://github.com/superyngo/wenpm-bucket) for a complete example.
+You can create custom buckets to distribute your own package collections. See the [official Wenget bucket repository](https://github.com/superyngo/wenget-bucket) for a complete example.
 
 #### Bucket Structure
 
@@ -176,7 +176,7 @@ Create a `manifest.json` with the following structure:
 # Create a new repository
 # Add manifest.json to the repository
 # Use raw.githubusercontent.com URL
-wenpm bucket add my-bucket https://raw.githubusercontent.com/username/my-bucket/main/manifest.json
+wenget bucket add my-bucket https://raw.githubusercontent.com/username/my-bucket/main/manifest.json
 ```
 
 **Other Hosting**:
@@ -184,9 +184,9 @@ wenpm bucket add my-bucket https://raw.githubusercontent.com/username/my-bucket/
 - GitHub Gists
 - CDN services
 
-#### Example: Official WenPM Bucket
+#### Example: Official Wenget Bucket
 
-The official bucket is maintained at: https://github.com/superyngo/wenpm-bucket
+The official bucket is maintained at: https://github.com/superyngo/wenget-bucket
 
 It includes curated packages with:
 - Verified working binaries across platforms
@@ -198,7 +198,7 @@ You can use it as a template for creating your own bucket:
 
 ```bash
 # Clone the official bucket as a template
-git clone https://github.com/superyngo/wenpm-bucket my-bucket
+git clone https://github.com/superyngo/wenget-bucket my-bucket
 cd my-bucket
 # Edit manifest.json with your packages
 # Commit and push to your repository
@@ -208,18 +208,18 @@ cd my-bucket
 
 ```bash
 # Add your bucket locally
-wenpm bucket add test-bucket https://example.com/manifest.json
+wenget bucket add test-bucket https://example.com/manifest.json
 
 # Verify packages are listed
-wenpm search <package-name>
+wenget search <package-name>
 
 # Test installation
-wenpm add <package-name>
+wenget add <package-name>
 ```
 
 ## Platform Support
 
-WenPM supports the following platforms:
+Wenget supports the following platforms:
 
 | Platform | Architecture | Status |
 |----------|--------------|--------|
@@ -234,16 +234,16 @@ WenPM supports the following platforms:
 
 ## How It Works
 
-1. **Platform Detection**: WenPM automatically detects your OS and architecture
+1. **Platform Detection**: Wenget automatically detects your OS and architecture
 2. **Package Resolution**: Searches buckets for the requested package
 3. **Binary Selection**: Identifies the appropriate binary from GitHub Releases
 4. **Download**: Downloads and caches the binary
-5. **Installation**: Extracts and places the binary in `~/.wenpm/apps/<package>/`
-6. **Shim Creation**: Creates a shim/symlink in `~/.wenpm/bin/` for easy access
+5. **Installation**: Extracts and places the binary in `~/.wenget/apps/<package>/`
+6. **Shim Creation**: Creates a shim/symlink in `~/.wenget/bin/` for easy access
 
 ## GitHub API Rate Limits
 
-WenPM uses the GitHub API to fetch package information and download binaries. Be aware of GitHub's API rate limits:
+Wenget uses the GitHub API to fetch package information and download binaries. Be aware of GitHub's API rate limits:
 
 ### Rate Limit Overview
 
@@ -252,28 +252,28 @@ WenPM uses the GitHub API to fetch package information and download binaries. Be
 | Unauthenticated | 60 requests/hour | Limited package searches and updates |
 | Authenticated | 5,000 requests/hour | Sufficient for normal usage |
 
-### Impact on WenPM Operations
+### Impact on Wenget Operations
 
 **Operations that consume API calls:**
-- `wenpm search <keyword>` - 1-2 calls per search
-- `wenpm add <package>` - 2 calls per package (release info + asset download)
-- `wenpm update` - 1 call per package source
-- `wenpm source add <url>` - 2 calls per source (validate repo + fetch releases)
+- `wenget search <keyword>` - 1-2 calls per search
+- `wenget add <package>` - 2 calls per package (release info + asset download)
+- `wenget update` - 1 call per package source
+- `wenget source add <url>` - 2 calls per source (validate repo + fetch releases)
 
 **Operations that don't consume API calls:**
-- `wenpm list` - Local only
-- `wenpm delete` - Local only
-- `wenpm bucket list/add/remove` - Local only
+- `wenget list` - Local only
+- `wenget delete` - Local only
+- `wenget bucket list/add/remove` - Local only
 - Bucket-based installs use cached package information
 
 ### Recommendations
 
 1. **Use Buckets**: The bucket system caches package information, reducing API calls significantly
-2. **Run `wenpm update` periodically** rather than before each search
+2. **Run `wenget update` periodically** rather than before each search
 3. **For heavy usage**: Consider authenticating with GitHub (future feature)
 4. **Rate limit exceeded?** Wait an hour or use buckets for cached package data
 
-The official WenPM bucket is updated regularly, so most users won't need to worry about rate limits when using bucket-based package management.
+The official Wenget bucket is updated regularly, so most users won't need to worry about rate limits when using bucket-based package management.
 
 ## Examples
 
@@ -281,43 +281,43 @@ The official WenPM bucket is updated regularly, so most users won't need to worr
 
 ```bash
 # Modern alternatives to classic Unix tools
-wenpm add ripgrep fd bat
+wenget add ripgrep fd bat
 
 # Git TUI
-wenpm add gitui lazygit
+wenget add gitui lazygit
 
 # System monitoring
-wenpm add bottom
+wenget add bottom
 
 # Shell prompt
-wenpm add starship
+wenget add starship
 
 # Directory navigation
-wenpm add zoxide
+wenget add zoxide
 ```
 
 ### Manage Packages
 
 ```bash
 # Search for a tool
-wenpm search rust
+wenget search rust
 
 # Update metadata and install
-wenpm update
-wenpm add tokei
+wenget update
+wenget add tokei
 
 # List what's installed
-wenpm list
+wenget list
 
 # Remove a package
-wenpm delete tokei
+wenget delete tokei
 ```
 
 ## Important Disclaimer
 
 **⚠️ NO WARRANTIES OR GUARANTEES**
 
-WenPM is a package manager that facilitates downloading and installing applications from GitHub Releases. **WenPM DOES NOT:**
+Wenget is a package manager that facilitates downloading and installing applications from GitHub Releases. **Wenget DOES NOT:**
 
 - ❌ Verify the authenticity or safety of packages
 - ❌ Maintain or update the applications themselves
@@ -331,34 +331,34 @@ WenPM is a package manager that facilitates downloading and installing applicati
 - ✅ Reviewing the source repositories and releases
 - ✅ Accepting all risks associated with installing third-party software
 
-**By using WenPM, you acknowledge that you install packages at your own risk.**
+**By using Wenget, you acknowledge that you install packages at your own risk.**
 
-WenPM acts only as a convenience tool for downloading and organizing binaries. The responsibility for verifying, securing, and using applications rests entirely with the user.
+Wenget acts only as a convenience tool for downloading and organizing binaries. The responsibility for verifying, securing, and using applications rests entirely with the user.
 
 ## Uninstallation
 
-### Using WenPM
+### Using Wenget
 ```bash
-wenpm del self
+wenget del self
 ```
 
 This will:
-1. Remove WenPM from PATH
-2. Delete all WenPM directories and installed packages
-3. Remove the WenPM executable itself
+1. Remove Wenget from PATH
+2. Delete all Wenget directories and installed packages
+3. Remove the Wenget executable itself
 
 ### Manual Uninstallation
 
 **Windows:**
 ```powershell
 # Remove from PATH, then delete:
-Remove-Item -Recurse -Force "$env:USERPROFILE\.wenpm"
+Remove-Item -Recurse -Force "$env:USERPROFILE\.wenget"
 ```
 
 **Linux/macOS:**
 ```bash
 # Remove from PATH, then delete:
-rm -rf ~/.wenpm
+rm -rf ~/.wenget
 ```
 
 ## Development
@@ -366,8 +366,8 @@ rm -rf ~/.wenpm
 ### Building from Source
 
 ```bash
-git clone https://github.com/superyngo/WenPM.git
-cd WenPM
+git clone https://github.com/superyngo/Wenget.git
+cd Wenget
 cargo build --release
 ```
 
@@ -380,7 +380,7 @@ cargo test
 ### Project Structure
 
 ```
-wenpm/
+wenget/
 ├── src/
 │   ├── bucket.rs         # Bucket management
 │   ├── cache.rs          # Package cache
@@ -415,20 +415,20 @@ source ~/.bashrc  # or ~/.zshrc, ~/.profile
 
 ```bash
 # Update package metadata
-wenpm update
+wenget update
 
 # Check available buckets
-wenpm bucket list
+wenget bucket list
 
 # Rebuild cache
-wenpm bucket refresh
+wenget bucket refresh
 ```
 
 ### Permission Errors (Linux/macOS)
 
 ```bash
-# Ensure ~/.wenpm/bin is in PATH and has correct permissions
-chmod +x ~/.wenpm/bin/*
+# Ensure ~/.wenget/bin is in PATH and has correct permissions
+chmod +x ~/.wenget/bin/*
 ```
 
 ## Contributing
@@ -456,17 +456,17 @@ Inspired by:
 
 ## Links
 
-- **GitHub**: https://github.com/superyngo/WenPM
-- **Releases**: https://github.com/superyngo/WenPM/releases
-- **Issues**: https://github.com/superyngo/WenPM/issues
-- **Official Bucket**: https://github.com/superyngo/wenpm-bucket
+- **GitHub**: https://github.com/superyngo/Wenget
+- **Releases**: https://github.com/superyngo/Wenget/releases
+- **Issues**: https://github.com/superyngo/Wenget/issues
+- **Official Bucket**: https://github.com/superyngo/wenget-bucket
 
 ## Changelog
 
 ### v0.2.0 (2025-01-21)
 - Add installation scripts for Windows and Unix
 - Improve init bucket checking
-- Fix self-deletion when executable is inside .wenpm
+- Fix self-deletion when executable is inside .wenget
 - Fix shim absolute path issues
 
 ### v0.1.0 (2025-01-21)

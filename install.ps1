@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
-# WenPM Remote Installation Script for Windows
-# Usage: irm https://raw.githubusercontent.com/superyngo/WenPM/main/install.ps1 | iex
+# Wenget Remote Installation Script for Windows
+# Usage: irm https://raw.githubusercontent.com/superyngo/Wenget/main/install.ps1 | iex
 
 param(
     [switch]$Uninstall
@@ -15,9 +15,9 @@ function Write-Error { Write-Host $args -ForegroundColor Red }
 function Write-Warning { Write-Host $args -ForegroundColor Yellow }
 
 # Configuration
-$APP_NAME = "wenpm"
-$REPO = "superyngo/WenPM"
-$INSTALL_DIR = "$env:USERPROFILE\.wenpm\apps\wenpm"
+$APP_NAME = "wenget"
+$REPO = "superyngo/Wenget"
+$INSTALL_DIR = "$env:USERPROFILE\.wenget\apps\wenget"
 $BIN_PATH = "$INSTALL_DIR\$APP_NAME.exe"
 
 function Get-LatestRelease {
@@ -26,7 +26,7 @@ function Get-LatestRelease {
         Write-Info "Fetching latest release information..."
 
         $release = Invoke-RestMethod -Uri $apiUrl -Headers @{
-            "User-Agent" = "wenpm-installer"
+            "User-Agent" = "wenget-installer"
         }
 
         return $release
@@ -49,8 +49,8 @@ function Get-Architecture {
     }
 }
 
-function Install-WenPM {
-    Write-Info "=== WenPM Installation Script ==="
+function Install-Wenget {
+    Write-Info "=== Wenget Installation Script ==="
     Write-Info ""
 
     # Get latest release
@@ -102,17 +102,17 @@ function Install-WenPM {
     Write-Success "Binary installed successfully!"
     Write-Info ""
 
-    # Run wenpm init
-    Write-Info "Initializing WenPM..."
+    # Run wenget init
+    Write-Info "Initializing Wenget..."
     Write-Info ""
 
     try {
         & $BIN_PATH init --yes
         Write-Info ""
-        Write-Success "WenPM initialized successfully!"
+        Write-Success "Wenget initialized successfully!"
     } catch {
-        Write-Warning "Failed to run wenpm init. You can run it manually later."
-        Write-Info "  Run: wenpm init"
+        Write-Warning "Failed to run wenget init. You can run it manually later."
+        Write-Info "  Run: wenget init"
     }
 
     Write-Info ""
@@ -122,10 +122,10 @@ function Install-WenPM {
     Write-Info "Installation path: $BIN_PATH"
     Write-Info ""
     Write-Info "Usage:"
-    Write-Info "  wenpm search <keyword>     - Search packages"
-    Write-Info "  wenpm add <package>        - Install a package"
-    Write-Info "  wenpm list                 - List installed packages"
-    Write-Info "  wenpm --help               - Show help"
+    Write-Info "  wenget search <keyword>     - Search packages"
+    Write-Info "  wenget add <package>        - Install a package"
+    Write-Info "  wenget list                 - List installed packages"
+    Write-Info "  wenget --help               - Show help"
     Write-Info ""
     Write-Warning "Note: You may need to restart your terminal for PATH changes to take effect."
     Write-Info ""
@@ -133,18 +133,18 @@ function Install-WenPM {
     Write-Info "  irm https://raw.githubusercontent.com/$REPO/main/install.ps1 | iex -Uninstall"
 }
 
-function Uninstall-WenPM {
-    Write-Info "=== WenPM Uninstallation Script ==="
+function Uninstall-Wenget {
+    Write-Info "=== Wenget Uninstallation Script ==="
     Write-Info ""
 
-    # Check if wenpm is available and run self-deletion
+    # Check if wenget is available and run self-deletion
     if (Test-Path $BIN_PATH) {
-        Write-Info "Running WenPM self-deletion..."
+        Write-Info "Running Wenget self-deletion..."
         try {
             & $BIN_PATH del self --yes
-            Write-Success "WenPM uninstalled successfully!"
+            Write-Success "Wenget uninstalled successfully!"
         } catch {
-            Write-Warning "WenPM self-deletion failed. Performing manual cleanup..."
+            Write-Warning "Wenget self-deletion failed. Performing manual cleanup..."
 
             # Remove binary
             Write-Info "Removing binary..."
@@ -160,15 +160,15 @@ function Uninstall-WenPM {
                 }
             }
 
-            # Try to remove .wenpm directory if empty
-            $wenpmDir = "$env:USERPROFILE\.wenpm"
-            if (Test-Path $wenpmDir) {
-                $items = Get-ChildItem $wenpmDir -Recurse -ErrorAction SilentlyContinue
+            # Try to remove .wenget directory if empty
+            $wengetDir = "$env:USERPROFILE\.wenget"
+            if (Test-Path $wengetDir) {
+                $items = Get-ChildItem $wengetDir -Recurse -ErrorAction SilentlyContinue
                 if ($items.Count -eq 0) {
-                    Remove-Item $wenpmDir -Force -Recurse
-                    Write-Success ".wenpm directory removed"
+                    Remove-Item $wengetDir -Force -Recurse
+                    Write-Success ".wenget directory removed"
                 } else {
-                    Write-Info ".wenpm directory contains other files, keeping it"
+                    Write-Info ".wenget directory contains other files, keeping it"
                 }
             }
         }
@@ -183,7 +183,7 @@ function Uninstall-WenPM {
 
 # Main
 if ($Uninstall) {
-    Uninstall-WenPM
+    Uninstall-Wenget
 } else {
-    Install-WenPM
+    Install-Wenget
 }

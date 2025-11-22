@@ -1,10 +1,10 @@
-//! CLI argument parsing for WenPM
+//! CLI argument parsing for Wenget
 
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "wenpm")]
-#[command(author = "WenPM Team")]
+#[command(name = "wenget")]
+#[command(author = "Wenget Team")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(about = "A cross-platform package manager for GitHub binaries", long_about = None)]
 #[command(propagate_version = true)]
@@ -73,12 +73,12 @@ pub enum Commands {
         #[arg(short = 'y', long)]
         yes: bool,
 
-        /// Force deletion (allow deleting wenpm itself)
+        /// Force deletion (allow deleting wenget itself)
         #[arg(short, long)]
         force: bool,
     },
 
-    /// Initialize WenPM (create directories and set up PATH)
+    /// Initialize Wenget (create directories and set up PATH)
     Init {
         /// Skip confirmation prompts
         #[arg(short = 'y', long)]

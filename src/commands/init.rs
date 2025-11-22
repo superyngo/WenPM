@@ -1,4 +1,4 @@
-//! Initialize WenPM
+//! Initialize Wenget
 
 use crate::bucket::Bucket;
 use crate::core::Config;
@@ -11,36 +11,36 @@ use std::path::PathBuf;
 #[cfg(not(windows))]
 use std::fs::{self, OpenOptions};
 
-/// Initialize WenPM (create directories and manifests)
+/// Initialize Wenget (create directories and manifests)
 pub fn run(yes: bool) -> Result<()> {
-    println!("{}", "Initializing WenPM...".cyan());
+    println!("{}", "Initializing Wenget...".cyan());
 
     let config = Config::new()?;
 
     if config.is_initialized() {
-        println!("{}", "✓ WenPM is already initialized".green());
+        println!("{}", "✓ Wenget is already initialized".green());
         println!("  Root: {}", config.paths().root().display());
 
-        // Check and setup wenpm executable if missing
-        check_and_setup_wenpm_executable(&config)?;
+        // Check and setup wenget executable if missing
+        check_and_setup_wenget_executable(&config)?;
 
         // Check if PATH is already configured
         if is_in_path(config.paths().bin_dir())? {
-            println!("{}", "✓ WenPM bin directory is in PATH".green());
+            println!("{}", "✓ Wenget bin directory is in PATH".green());
         } else {
-            println!("{}", "⚠ WenPM bin directory is not in PATH".yellow());
+            println!("{}", "⚠ Wenget bin directory is not in PATH".yellow());
             println!();
             setup_path(&config)?;
         }
 
-        // Check if wenpm bucket exists
-        if !has_wenpm_bucket(&config)? {
+        // Check if wenget bucket exists
+        if !has_wenget_bucket(&config)? {
             println!();
-            if prompt_add_wenpm_bucket(yes)? {
-                add_wenpm_bucket(&config)?;
+            if prompt_add_wenget_bucket(yes)? {
+                add_wenget_bucket(&config)?;
             }
         } else {
-            println!("{}", "✓ WenPM bucket is configured".green());
+            println!("{}", "✓ Wenget bucket is configured".green());
         }
 
         return Ok(());
@@ -48,7 +48,7 @@ pub fn run(yes: bool) -> Result<()> {
 
     config.init()?;
 
-    println!("{}", "✓ WenPM initialized successfully!".green());
+    println!("{}", "✓ Wenget initialized successfully!".green());
     println!();
     println!("Created directories:");
     println!("  Root:      {}", config.paths().root().display());
@@ -61,33 +61,33 @@ pub fn run(yes: bool) -> Result<()> {
     println!("  Installed: {}", config.paths().installed_json().display());
     println!();
 
-    // Setup wenpm executable itself
-    setup_wenpm_executable(&config)?;
+    // Setup wenget executable itself
+    setup_wenget_executable(&config)?;
 
     // Set up PATH
     setup_path(&config)?;
 
-    // Ask about adding wenpm bucket
+    // Ask about adding wenget bucket
     println!();
-    if prompt_add_wenpm_bucket(yes)? {
-        add_wenpm_bucket(&config)?;
+    if prompt_add_wenget_bucket(yes)? {
+        add_wenget_bucket(&config)?;
     }
 
     println!();
     println!("{}", "Next steps:".bold());
-    println!("  1. List available:       wenpm source list");
-    println!("  2. Search packages:      wenpm search <keyword>");
-    println!("  3. Install packages:     wenpm add <package-name>");
+    println!("  1. List available:       wenget source list");
+    println!("  2. Search packages:      wenget search <keyword>");
+    println!("  3. Install packages:     wenget add <package-name>");
 
     Ok(())
 }
 
-/// Create wenpm shim with absolute path (Windows)
+/// Create wenget shim with absolute path (Windows)
 #[cfg(windows)]
-fn create_wenpm_shim(target: &PathBuf, shim: &PathBuf) -> Result<()> {
+fn create_wenget_shim(target: &PathBuf, shim: &PathBuf) -> Result<()> {
     use std::fs;
 
-    log::debug!("Creating wenpm shim: {}", shim.display());
+    log::debug!("Creating wenget shim: {}", shim.display());
 
     // Use absolute path in shim to avoid relative path issues
     let shim_content = format!("@echo off\r\n\"{}\" %*\r\n", target.display());
@@ -110,13 +110,13 @@ fn create_wenpm_shim(target: &PathBuf, shim: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-/// Create wenpm symlink (Unix)
+/// Create wenget symlink (Unix)
 #[cfg(unix)]
-fn create_wenpm_symlink(target: &PathBuf, link: &PathBuf) -> Result<()> {
+fn create_wenget_symlink(target: &PathBuf, link: &PathBuf) -> Result<()> {
     use std::os::unix::fs::symlink;
 
     log::debug!(
-        "Creating wenpm symlink: {} -> {}",
+        "Creating wenget symlink: {} -> {}",
         link.display(),
         target.display()
     );
@@ -138,59 +138,59 @@ fn create_wenpm_symlink(target: &PathBuf, link: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-/// Check and setup wenpm executable if missing (for already initialized)
-fn check_and_setup_wenpm_executable(config: &Config) -> Result<()> {
+/// Check and setup wenget executable if missing (for already initialized)
+fn check_and_setup_wenget_executable(config: &Config) -> Result<()> {
     let bin_dir = config.paths().bin_dir();
 
     #[cfg(windows)]
-    let wenpm_bin = bin_dir.join("wenpm.cmd");
+    let wenget_bin = bin_dir.join("wenget.cmd");
 
     #[cfg(unix)]
-    let wenpm_bin = bin_dir.join("wenpm");
+    let wenget_bin = bin_dir.join("wenget");
 
-    // Check if wenpm shim/symlink exists
-    if wenpm_bin.exists() {
-        println!("{}", "✓ WenPM shim is in bin directory".green());
+    // Check if wenget shim/symlink exists
+    if wenget_bin.exists() {
+        println!("{}", "✓ Wenget shim is in bin directory".green());
     } else {
-        println!("{}", "⚠ WenPM shim is not in bin directory".yellow());
+        println!("{}", "⚠ Wenget shim is not in bin directory".yellow());
         println!();
-        setup_wenpm_executable(config)?;
+        setup_wenget_executable(config)?;
     }
 
     Ok(())
 }
 
-/// Setup wenpm executable itself in bin directory
-fn setup_wenpm_executable(config: &Config) -> Result<()> {
+/// Setup wenget executable itself in bin directory
+fn setup_wenget_executable(config: &Config) -> Result<()> {
     let current_exe = env::current_exe().context("Failed to get current executable path")?;
     let bin_dir = config.paths().bin_dir();
 
     #[cfg(windows)]
     {
-        let shim_path = bin_dir.join("wenpm.cmd");
+        let shim_path = bin_dir.join("wenget.cmd");
 
-        match create_wenpm_shim(&current_exe, &shim_path) {
+        match create_wenget_shim(&current_exe, &shim_path) {
             Ok(_) => {
-                println!("{}", "✓ Created wenpm shim in bin directory".green());
+                println!("{}", "✓ Created wenget shim in bin directory".green());
             }
             Err(e) => {
-                println!("{} Failed to create wenpm shim: {}", "⚠".yellow(), e);
-                println!("  You can manually create a shim to wenpm.exe later");
+                println!("{} Failed to create wenget shim: {}", "⚠".yellow(), e);
+                println!("  You can manually create a shim to wenget.exe later");
             }
         }
     }
 
     #[cfg(unix)]
     {
-        let symlink_path = bin_dir.join("wenpm");
+        let symlink_path = bin_dir.join("wenget");
 
-        match create_wenpm_symlink(&current_exe, &symlink_path) {
+        match create_wenget_symlink(&current_exe, &symlink_path) {
             Ok(_) => {
-                println!("{}", "✓ Created wenpm symlink in bin directory".green());
+                println!("{}", "✓ Created wenget symlink in bin directory".green());
             }
             Err(e) => {
-                println!("{} Failed to create wenpm symlink: {}", "⚠".yellow(), e);
-                println!("  You can manually link wenpm to the bin directory later");
+                println!("{} Failed to create wenget symlink: {}", "⚠".yellow(), e);
+                println!("  You can manually link wenget to the bin directory later");
             }
         }
     }
@@ -199,7 +199,7 @@ fn setup_wenpm_executable(config: &Config) -> Result<()> {
     Ok(())
 }
 
-/// Set up PATH for WenPM bin directory
+/// Set up PATH for Wenget bin directory
 fn setup_path(config: &Config) -> Result<()> {
     let bin_dir = config.paths().bin_dir();
     let bin_dir_str = bin_dir.to_string_lossy();
@@ -247,13 +247,13 @@ fn setup_path_windows(bin_dir: &str) -> Result<()> {
     let result = String::from_utf8_lossy(&output.stdout);
 
     if result.contains("Added") {
-        println!("{}", "✓ Added WenPM bin directory to user PATH".green());
+        println!("{}", "✓ Added Wenget bin directory to user PATH".green());
         println!();
         println!("{}", "IMPORTANT:".yellow().bold());
         println!("  Please restart your terminal or command prompt");
         println!("  for the PATH changes to take effect.");
     } else if result.contains("Already exists") {
-        println!("{}", "✓ WenPM bin directory is already in PATH".green());
+        println!("{}", "✓ Wenget bin directory is already in PATH".green());
     } else if !output.status.success() {
         println!("{}", "⚠ Failed to automatically update PATH".yellow());
         println!();
@@ -280,7 +280,7 @@ fn setup_path_unix(bin_dir: &str) -> Result<()> {
         return Ok(());
     }
 
-    let export_line = format!("\n# WenPM\nexport PATH=\"{}:$PATH\"\n", bin_dir);
+    let export_line = format!("\n# Wenget\nexport PATH=\"{}:$PATH\"\n", bin_dir);
 
     let mut updated_files = Vec::new();
     let mut skipped_files = Vec::new();
@@ -321,7 +321,7 @@ fn setup_path_unix(bin_dir: &str) -> Result<()> {
     }
 
     if !skipped_files.is_empty() {
-        println!("{}", "✓ WenPM is already configured in:".green());
+        println!("{}", "✓ Wenget is already configured in:".green());
         for path in &skipped_files {
             println!("  • {}", path.display());
         }
@@ -390,23 +390,23 @@ fn is_in_path(dir: PathBuf) -> Result<bool> {
         .any(|p| p == dir_str.as_ref()))
 }
 
-/// Prompt user to add wenpm bucket
-fn prompt_add_wenpm_bucket(yes: bool) -> Result<bool> {
+/// Prompt user to add wenget bucket
+fn prompt_add_wenget_bucket(yes: bool) -> Result<bool> {
     if yes {
         return Ok(true);
     }
 
     println!("{}", "─".repeat(60));
     println!();
-    println!("{}", "Add official WenPM bucket?".bold());
+    println!("{}", "Add official Wenget bucket?".bold());
     println!();
-    println!("The WenPM bucket provides curated open-source tools including:");
+    println!("The Wenget bucket provides curated open-source tools including:");
     println!("  • ripgrep, fd, bat - Modern CLI utilities");
     println!("  • gitui, zoxide - Enhanced Git and navigation");
     println!("  • starship, bottom - Shell customization and monitoring");
     println!("  • and more...");
     println!();
-    print!("Add wenpm bucket? [Y/n]: ");
+    print!("Add wenget bucket? [Y/n]: ");
     io::stdout().flush()?;
 
     let mut input = String::new();
@@ -416,39 +416,39 @@ fn prompt_add_wenpm_bucket(yes: bool) -> Result<bool> {
     Ok(input.is_empty() || input == "y" || input == "yes")
 }
 
-/// Check if wenpm bucket is already configured
-fn has_wenpm_bucket(config: &Config) -> Result<bool> {
-    const WENPM_BUCKET_URL: &str =
-        "https://raw.githubusercontent.com/superyngo/wenpm-bucket/refs/heads/main/manifest.json";
+/// Check if wenget bucket is already configured
+fn has_wenget_bucket(config: &Config) -> Result<bool> {
+    const WENGET_BUCKET_URL: &str =
+        "https://raw.githubusercontent.com/superyngo/wenget-bucket/refs/heads/main/manifest.json";
 
     match config.get_or_create_buckets() {
         Ok(bucket_config) => {
-            // Check if any bucket has the wenpm URL
+            // Check if any bucket has the wenget URL
             Ok(bucket_config
                 .buckets
                 .iter()
-                .any(|b| b.url == WENPM_BUCKET_URL))
+                .any(|b| b.url == WENGET_BUCKET_URL))
         }
         Err(_) => Ok(false),
     }
 }
 
-/// Add wenpm bucket
-fn add_wenpm_bucket(config: &Config) -> Result<()> {
-    const WENPM_BUCKET_NAME: &str = "wenpm";
-    const WENPM_BUCKET_URL: &str =
-        "https://raw.githubusercontent.com/superyngo/wenpm-bucket/refs/heads/main/manifest.json";
+/// Add wenget bucket
+fn add_wenget_bucket(config: &Config) -> Result<()> {
+    const WENGET_BUCKET_NAME: &str = "wenget";
+    const WENGET_BUCKET_URL: &str =
+        "https://raw.githubusercontent.com/superyngo/wenget-bucket/refs/heads/main/manifest.json";
 
     println!();
-    println!("{} wenpm bucket...", "Adding".cyan());
+    println!("{} wenget bucket...", "Adding".cyan());
 
     // Load bucket config
     let mut bucket_config = config.get_or_create_buckets()?;
 
     // Create bucket
     let bucket = Bucket {
-        name: WENPM_BUCKET_NAME.to_string(),
-        url: WENPM_BUCKET_URL.to_string(),
+        name: WENGET_BUCKET_NAME.to_string(),
+        url: WENGET_BUCKET_URL.to_string(),
         enabled: true,
         priority: 100,
     };
@@ -458,15 +458,15 @@ fn add_wenpm_bucket(config: &Config) -> Result<()> {
         // Save config
         config.save_buckets(&bucket_config)?;
 
-        println!("{} Bucket '{}' added", "✓".green(), WENPM_BUCKET_NAME);
-        println!("  URL: {}", WENPM_BUCKET_URL);
+        println!("{} Bucket '{}' added", "✓".green(), WENGET_BUCKET_NAME);
+        println!("  URL: {}", WENGET_BUCKET_URL);
 
         // Build cache immediately
         match config.rebuild_cache() {
             Ok(cache) => {
                 println!();
                 println!(
-                    "{} {} package(s) available from wenpm bucket",
+                    "{} {} package(s) available from wenget bucket",
                     "✓".green(),
                     cache.packages.len()
                 );
@@ -474,14 +474,14 @@ fn add_wenpm_bucket(config: &Config) -> Result<()> {
             Err(e) => {
                 println!();
                 println!("{} Failed to build cache: {}", "⚠".yellow(), e);
-                println!("  You can rebuild it later with: wenpm bucket refresh");
+                println!("  You can rebuild it later with: wenget bucket refresh");
             }
         }
     } else {
         println!(
             "{} Bucket '{}' already exists",
             "✗".yellow(),
-            WENPM_BUCKET_NAME
+            WENGET_BUCKET_NAME
         );
     }
 

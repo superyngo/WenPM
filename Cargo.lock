@@ -1991,7 +1991,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "wenpm"
+name = "wenget"
 version = "0.2.0"
 dependencies = [
  "anyhow",

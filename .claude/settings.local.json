@@ -15,7 +15,9 @@
       "Bash(cargo fmt:*)",
       "Bash(cargo clippy:*)",
       "Bash(powershell -Command:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Implement bucket system and refactor codebase\n\n## New Features\n- Add bucket system for managing package sources\n- Implement bucket add/remove/list commands\n- Add caching layer for improved performance\n\n## Refactoring\n- Update CLI structure for better organization\n- Refactor command modules (add, delete, init, list, search, source, update)\n- Improve core modules (config, manifest, paths, platform)\n- Enhance downloader and installer modules\n- Update HTTP utilities\n\n## Documentation\n- Update QUICKSTART.md with latest features\n- Update SOURCES.md with bucket information\n\n## Cleanup\n- Remove obsolete source files\n- Clean up temporary files\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Implement bucket system and refactor codebase\n\n## New Features\n- Add bucket system for managing package sources\n- Implement bucket add/remove/list commands\n- Add caching layer for improved performance\n\n## Refactoring\n- Update CLI structure for better organization\n- Refactor command modules (add, delete, init, list, search, source, update)\n- Improve core modules (config, manifest, paths, platform)\n- Enhance downloader and installer modules\n- Update HTTP utilities\n\n## Documentation\n- Update QUICKSTART.md with latest features\n- Update SOURCES.md with bucket information\n\n## Cleanup\n- Remove obsolete source files\n- Clean up temporary files\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(find:*)",
+      "Bash(sudo apk add:*)"
     ],
     "deny": [],
     "ask": []

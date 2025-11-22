@@ -1,6 +1,6 @@
-我想仿造andoid obtanium/windows scoop用rust開發一個跨平台通用的github binary跨平台包管理器WenPM(Wen Package Manager)
-https://github.com/superyngo/WenPM
-命令wenpm
+我想仿造andoid obtanium/windows scoop用rust開發一個跨平台通用的github binary跨平台包管理器Wenget(Wen Package Manager)
+https://github.com/superyngo/Wenget
+命令wenget
 基本思路是
 **GitHub binary metadata aggregator + local portable package manager**
 
@@ -70,7 +70,7 @@ https://github.com/superyngo/WenPM
 「裝在使用者 home 內」，建議如下架構：
 
 ```
-~/.wenpm/
+~/.wenget/
    sources.json
    installed.json
    apps/
@@ -83,19 +83,19 @@ https://github.com/superyngo/WenPM
 固定 binary 入口點：
 
 ```
-~/.wenpm/apps/<name>/bin/<name>
+~/.wenget/apps/<name>/bin/<name>
 ```
 
 然後 PATH 只加：
 
 ```
-$HOME/.wenpm/bin
+$HOME/.wenget/bin
 ```
 
 再在此做 symlink：
 
 ```
-~/.wenpm/bin/app1 → ../apps/app1/bin/app1
+~/.wenget/bin/app1 → ../apps/app1/bin/app1
 ```
 
 Windows 則用 .cmd shim。

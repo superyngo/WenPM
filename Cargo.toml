@@ -1,11 +1,11 @@
 [package]
-name = "wenpm"
+name = "wenget"
 version = "0.2.0"
 edition = "2021"
-authors = ["WenPM Team"]
+authors = ["Wenget Team"]
 description = "A cross-platform package manager for GitHub binaries"
 license = "MIT"
-repository = "https://github.com/superyngo/WenPM"
+repository = "https://github.com/superyngo/Wenget"
 keywords = ["package-manager", "github", "binary", "portable"]
 categories = ["command-line-utilities"]
 

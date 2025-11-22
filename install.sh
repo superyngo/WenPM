@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# WenPM Remote Installation Script for Linux/macOS
-# Usage: curl -fsSL https://raw.githubusercontent.com/superyngo/WenPM/main/install.sh | bash
+# Wenget Remote Installation Script for Linux/macOS
+# Usage: curl -fsSL https://raw.githubusercontent.com/superyngo/Wenget/main/install.sh | bash
 
 set -e
 
@@ -17,9 +17,9 @@ print_error() { echo -e "${RED}$1${NC}"; }
 print_warning() { echo -e "${YELLOW}$1${NC}"; }
 
 # Configuration
-APP_NAME="wenpm"
-REPO="superyngo/WenPM"
-INSTALL_DIR="$HOME/.wenpm/apps/wenpm"
+APP_NAME="wenget"
+REPO="superyngo/Wenget"
+INSTALL_DIR="$HOME/.wenget/apps/wenget"
 BIN_PATH="$INSTALL_DIR/$APP_NAME"
 
 # Detect OS and Architecture
@@ -167,27 +167,27 @@ download_release() {
     print_success "Binary installed successfully!"
 }
 
-# Run wenpm init
+# Run wenget init
 run_init() {
     print_info ""
-    print_info "Initializing WenPM..."
+    print_info "Initializing Wenget..."
     print_info ""
 
     if [ -x "$BIN_PATH" ]; then
         "$BIN_PATH" init --yes || {
-            print_warning "Failed to run wenpm init. You can run it manually later."
-            print_info "  Run: wenpm init"
+            print_warning "Failed to run wenget init. You can run it manually later."
+            print_info "  Run: wenget init"
         }
         print_info ""
-        print_success "WenPM initialized successfully!"
+        print_success "Wenget initialized successfully!"
     else
         print_warning "Binary not executable. Skipping initialization."
     fi
 }
 
 # Installation function
-install_wenpm() {
-    print_info "=== WenPM Installation Script ==="
+install_wenget() {
+    print_info "=== Wenget Installation Script ==="
     echo ""
 
     detect_platform
@@ -202,10 +202,10 @@ install_wenpm() {
     print_info "Installation path: $BIN_PATH"
     echo ""
     print_info "Usage:"
-    print_info "  wenpm search <keyword>     - Search packages"
-    print_info "  wenpm add <package>        - Install a package"
-    print_info "  wenpm list                 - List installed packages"
-    print_info "  wenpm --help               - Show help"
+    print_info "  wenget search <keyword>     - Search packages"
+    print_info "  wenget add <package>        - Install a package"
+    print_info "  wenget list                 - List installed packages"
+    print_info "  wenget --help               - Show help"
     echo ""
     print_warning "Note: You may need to restart your terminal for PATH changes to take effect."
     echo ""
@@ -214,17 +214,17 @@ install_wenpm() {
 }
 
 # Uninstallation function
-uninstall_wenpm() {
-    print_info "=== WenPM Uninstallation Script ==="
+uninstall_wenget() {
+    print_info "=== Wenget Uninstallation Script ==="
     echo ""
 
-    # Check if wenpm is available and run self-deletion
+    # Check if wenget is available and run self-deletion
     if [ -x "$BIN_PATH" ]; then
-        print_info "Running WenPM self-deletion..."
+        print_info "Running Wenget self-deletion..."
         if "$BIN_PATH" del self --yes; then
-            print_success "WenPM uninstalled successfully!"
+            print_success "Wenget uninstalled successfully!"
         else
-            print_warning "WenPM self-deletion failed. Performing manual cleanup..."
+            print_warning "Wenget self-deletion failed. Performing manual cleanup..."
 
             # Remove binary
             print_info "Removing binary..."
@@ -239,14 +239,14 @@ uninstall_wenpm() {
                 fi
             fi
 
-            # Try to remove .wenpm directory if empty
-            local wenpm_dir="$HOME/.wenpm"
-            if [ -d "$wenpm_dir" ]; then
-                if [ -z "$(ls -A "$wenpm_dir")" ]; then
-                    rmdir "$wenpm_dir"
-                    print_success ".wenpm directory removed"
+            # Try to remove .wenget directory if empty
+            local wenget_dir="$HOME/.wenget"
+            if [ -d "$wenget_dir" ]; then
+                if [ -z "$(ls -A "$wenget_dir")" ]; then
+                    rmdir "$wenget_dir"
+                    print_success ".wenget directory removed"
                 else
-                    print_info ".wenpm directory contains other files, keeping it"
+                    print_info ".wenget directory contains other files, keeping it"
                 fi
             fi
         fi
@@ -263,10 +263,10 @@ ACTION="${1:-install}"
 
 case "$ACTION" in
     install)
-        install_wenpm
+        install_wenget
         ;;
     uninstall)
-        uninstall_wenpm
+        uninstall_wenget
         ;;
     *)
         print_error "Unknown action: $ACTION"

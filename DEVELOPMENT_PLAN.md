@@ -1,12 +1,12 @@
-# WenPM 開發計畫
+# Wenget 開發計畫
 
 ## 📋 專案概述
 
-**專案名稱**: WenPM (Wen Package Manager)
+**專案名稱**: Wenget (Wen Package Manager)
 **專案定位**: 跨平台 GitHub Binary 包管理器
 **開發語言**: Rust
 **目標平台**: Windows, Linux, macOS
-**GitHub**: https://github.com/superyngo/WenPM
+**GitHub**: https://github.com/superyngo/Wenget
 
 ### 核心特點
 - 無版本管理（永遠安裝最新版）
@@ -21,7 +21,7 @@
 
 ### 專案結構
 ```
-wenpm/
+wenget/
 ├── Cargo.toml
 ├── README.md
 ├── DEVELOPMENT_PLAN.md
@@ -77,24 +77,24 @@ wenpm/
 {
   "packages": [
     {
-      "name": "wenpm",
+      "name": "wenget",
       "description": "Wen Package Manager",
-      "repo": "https://github.com/superyngo/WenPM",
-      "homepage": "https://github.com/superyngo/WenPM",
+      "repo": "https://github.com/superyngo/Wenget",
+      "homepage": "https://github.com/superyngo/Wenget",
       "license": "MIT",
       "latest": "0.1.0",
       "updated_at": "2025-01-19T10:00:00Z",
       "platforms": {
         "windows-x86_64": {
-          "url": "https://github.com/superyngo/WenPM/releases/download/v0.1.0/wenpm-windows-x86_64.zip",
+          "url": "https://github.com/superyngo/Wenget/releases/download/v0.1.0/wenget-windows-x86_64.zip",
           "size": 2500000
         },
         "linux-x86_64-musl": {
-          "url": "https://github.com/superyngo/WenPM/releases/download/v0.1.0/wenpm-linux-x86_64-musl.tar.gz",
+          "url": "https://github.com/superyngo/Wenget/releases/download/v0.1.0/wenget-linux-x86_64-musl.tar.gz",
           "size": 2300000
         },
         "macos-aarch64": {
-          "url": "https://github.com/superyngo/WenPM/releases/download/v0.1.0/wenpm-macos-aarch64.tar.gz",
+          "url": "https://github.com/superyngo/Wenget/releases/download/v0.1.0/wenget-macos-aarch64.tar.gz",
           "size": 2400000
         }
       }
@@ -108,31 +108,31 @@ wenpm/
 ```json
 {
   "packages": {
-    "wenpm": {
+    "wenget": {
       "version": "0.1.0",
       "platform": "windows-x86_64",
       "installed_at": "2025-01-19T12:00:00Z",
-      "install_path": "C:\\Users\\user\\.wenpm\\apps\\wenpm",
+      "install_path": "C:\\Users\\user\\.wenget\\apps\\wenget",
       "files": [
-        "bin/wenpm.exe"
+        "bin/wenget.exe"
       ]
     }
   }
 }
 ```
 
-#### 目錄結構 (~/.wenpm/)
+#### 目錄結構 (~/.wenget/)
 ```
-~/.wenpm/
+~/.wenget/
 ├── sources.json           # 來源庫
 ├── installed.json         # 已安裝資訊
 ├── bin/                   # Symlink/Shim 目錄（加入 PATH）
-│   ├── wenpm -> ../apps/wenpm/bin/wenpm  (Unix)
-│   └── wenpm.cmd                         (Windows)
+│   ├── wenget -> ../apps/wenget/bin/wenget  (Unix)
+│   └── wenget.cmd                         (Windows)
 ├── apps/                  # 應用程式安裝目錄
-│   ├── wenpm/
+│   ├── wenget/
 │   │   └── bin/
-│   │       └── wenpm.exe
+│   │       └── wenget.exe
 │   └── wedi/
 │       ├── bin/
 │       │   └── wedi.exe
@@ -158,7 +158,7 @@ wenpm/
 - [ ] **config.rs**: 配置管理
   - 載入/儲存 sources.json
   - 載入/儲存 installed.json
-  - 目錄初始化 (~/.wenpm/)
+  - 目錄初始化 (~/.wenget/)
 
 - [ ] **manifest.rs**: 資料結構定義
   - `Package` struct
@@ -180,15 +180,15 @@ wenpm/
 #### 1.3 CLI 框架
 - [ ] **cli.rs**: 使用 clap 定義命令
   ```rust
-  wenpm add <url>...
-  wenpm list
-  wenpm search <name>...
-  wenpm info <name>...
-  wenpm update
-  wenpm install <name>...
-  wenpm upgrade [all|<name>...]
-  wenpm del <name>...
-  wenpm setup-path
+  wenget add <url>...
+  wenget list
+  wenget search <name>...
+  wenget info <name>...
+  wenget update
+  wenget install <name>...
+  wenget upgrade [all|<name>...]
+  wenget del <name>...
+  wenget setup-path
   ```
 
 ---
@@ -261,7 +261,7 @@ wenpm/
   - 格式化輸出 (表格)
     ```
     NAME    VERSION  SIZE     DESCRIPTION
-    wenpm   0.1.0    2.5 MB   Wen Package Manager
+    wenget   0.1.0    2.5 MB   Wen Package Manager
     wedi    0.1.12   1.2 MB   A minimalist text editor
     ```
 
@@ -296,7 +296,7 @@ wenpm/
   - 使用 reqwest 非同步下載
   - 進度條顯示 (indicatif)
   - 斷點續傳支援 (可選)
-  - 下載到 `~/.wenpm/cache/downloads/`
+  - 下載到 `~/.wenget/cache/downloads/`
 
 #### 5.2 解壓模組
 - [ ] **installer/extractor.rs**
@@ -322,7 +322,7 @@ wenpm/
 #### 5.4 Symlink/Shim 建立
 - [ ] **installer/symlink.rs** (Unix)
   ```rust
-  symlink("../apps/wedi/bin/wedi", "~/.wenpm/bin/wedi")?;
+  symlink("../apps/wedi/bin/wedi", "~/.wenget/bin/wedi")?;
   ```
 
 - [ ] **installer/shim.rs** (Windows)
@@ -336,7 +336,7 @@ wenpm/
   1. 檢查 sources.json 是否存在 package
   2. 檢查當前平台是否支援
   3. 下載 binary
-  4. 解壓到 `~/.wenpm/apps/<name>/`
+  4. 解壓到 `~/.wenget/apps/<name>/`
   5. 建立 symlink/shim
   6. 更新 installed.json
   7. 清理下載快取
@@ -366,15 +366,15 @@ wenpm/
   - 重複 install 流程（覆蓋舊版）
 
 #### 6.3 upgrade self
-- [ ] 特殊處理 wenpm 自身更新
+- [ ] 特殊處理 wenget 自身更新
   - **Unix**: 直接覆蓋執行檔
     ```rust
-    fs::copy("wenpm.new", "~/.wenpm/bin/wenpm")?;
+    fs::copy("wenget.new", "~/.wenget/bin/wenget")?;
     ```
   - **Windows**: 重命名 + 清理腳本
     ```rust
-    fs::rename("wenpm.exe", "wenpm.old.exe")?;
-    fs::rename("wenpm.new.exe", "wenpm.exe")?;
+    fs::rename("wenget.exe", "wenget.old.exe")?;
+    fs::rename("wenget.new.exe", "wenget.exe")?;
     create_cleanup_script()?;
     exit(0);
     ```
@@ -386,14 +386,14 @@ wenpm/
 #### 7.1 delete 命令實作
 - [ ] **delete.rs**
   - 檢查 installed.json
-  - 刪除 `~/.wenpm/apps/<name>/`
+  - 刪除 `~/.wenget/apps/<name>/`
   - 刪除 symlink/shim
   - 更新 installed.json
   - 支援批次刪除
   - 支援萬用字元 `*`
 
 #### 7.2 安全檢查
-- [ ] 防止刪除 wenpm 自身（除非使用 `--force`）
+- [ ] 防止刪除 wenget 自身（除非使用 `--force`）
 - [ ] 確認提示（除非使用 `--yes`）
 
 ---
@@ -405,7 +405,7 @@ wenpm/
   - **Unix**: 偵測 shell (bash/zsh/fish)
   - 附加到配置檔
     ```bash
-    echo 'export PATH="$HOME/.wenpm/bin:$PATH"' >> ~/.bashrc
+    echo 'export PATH="$HOME/.wenget/bin:$PATH"' >> ~/.bashrc
     ```
   - **Windows**: 使用 `setx` 修改環境變數
     ```powershell
@@ -620,8 +620,8 @@ panic = "abort"        # Panic 時直接 abort
 
 ```bash
 # 1. 建立專案
-cargo new wenpm
-cd wenpm
+cargo new wenget
+cd wenget
 
 # 2. 複製此開發計畫
 cp ../DEVELOPMENT_PLAN.md .
@@ -676,4 +676,4 @@ refactor: 重構 binary 選擇邏輯
 
 **Last Updated**: 2025-01-19
 **Version**: 1.0
-**Author**: WenPM Development Team
+**Author**: Wenget Development Team

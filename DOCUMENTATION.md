@@ -1,13 +1,13 @@
-# WenPM Documentation Index
+# Wenget Documentation Index
 
-Welcome to WenPM! This document helps you navigate all available documentation.
+Welcome to Wenget! This document helps you navigate all available documentation.
 
 ## 📚 Documentation Files
 
 ### For Users
 
 #### 🚀 [QUICKSTART.md](QUICKSTART.md)
-**Start here if you're new to WenPM!**
+**Start here if you're new to Wenget!**
 - Installation instructions
 - First steps tutorial
 - Common commands
@@ -23,7 +23,7 @@ Welcome to WenPM! This document helps you navigate all available documentation.
 
 #### 📖 [README.md](README.md)
 **Project overview and main documentation**
-- What is WenPM
+- What is Wenget
 - Features
 - Installation guide
 - Basic usage
@@ -33,16 +33,16 @@ Welcome to WenPM! This document helps you navigate all available documentation.
 #### 🔷 [sources-essential.txt](sources-essential.txt)
 **Recommended for beginners**
 - 12 essential CLI tools
-- Verified to work with WenPM
-- Includes WenPM official tools (cate, wedi)
+- Verified to work with Wenget
+- Includes Wenget official tools (cate, wedi)
 - Core utilities: ripgrep, fd, bat, zoxide, eza, bottom, dust, hyperfine, gitui, starship
 
 Import with:
 ```bash
-wenpm source import sources-essential.txt
+wenget source import sources-essential.txt
 ```
 
-#### 🔶 [wenpm-sources.txt](wenpm-sources.txt)
+#### 🔶 [wenget-sources.txt](wenget-sources.txt)
 **Comprehensive collection**
 - Extended list of popular CLI tools
 - Additional utilities beyond essential list
@@ -50,7 +50,7 @@ wenpm source import sources-essential.txt
 
 Import with:
 ```bash
-wenpm source import wenpm-sources.txt
+wenget source import wenget-sources.txt
 ```
 
 ### For Developers
@@ -75,10 +75,10 @@ wenpm source import wenpm-sources.txt
 **Import popular tools**
 → Use [sources-essential.txt](sources-essential.txt)
 
-**Learn about WenPM features**
+**Learn about Wenget features**
 → Read [README.md](README.md)
 
-**Contribute to WenPM**
+**Contribute to Wenget**
 → Read [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) and [SOURCES.md](SOURCES.md#contributing)
 
 ## 📝 Quick Reference
@@ -86,75 +86,75 @@ wenpm source import wenpm-sources.txt
 ### Common Commands
 
 ```bash
-# Initialize WenPM
-wenpm init
+# Initialize Wenget
+wenget init
 
 # Import sources
-wenpm source import sources-essential.txt
+wenget source import sources-essential.txt
 
 # List available packages
-wenpm source list
+wenget source list
 
 # Show package info
-wenpm source info ripgrep
+wenget source info ripgrep
 
 # Install packages
-wenpm add ripgrep fd bat
+wenget add ripgrep fd bat
 
 # List installed packages
-wenpm list
+wenget list
 
 # Update packages
-wenpm update all
+wenget update all
 
 # Remove packages
-wenpm del package-name
+wenget del package-name
 ```
 
 ### Source File Management
 
 ```bash
 # Import from file
-wenpm source import sources-essential.txt
+wenget source import sources-essential.txt
 
 # Import from URL
-wenpm source import https://raw.githubusercontent.com/.../sources.txt
+wenget source import https://raw.githubusercontent.com/.../sources.txt
 
 # Export your sources
-wenpm source export -o my-sources.txt
+wenget source export -o my-sources.txt
 
 # Update package metadata
-wenpm source update
+wenget source update
 
 # Add single package
-wenpm source add https://github.com/user/repo
+wenget source add https://github.com/user/repo
 
 # Remove package from sources
-wenpm source del package-name
+wenget source del package-name
 ```
 
 ## 🔍 Finding Information
 
 | I want to know... | Check this file... |
 |------------------|-------------------|
-| How to install WenPM | QUICKSTART.md |
+| How to install Wenget | QUICKSTART.md |
 | What tools are available | SOURCES.md |
 | How a specific tool works | SOURCES.md (Tool Descriptions) |
-| How to use WenPM commands | QUICKSTART.md (Common Commands) |
+| How to use Wenget commands | QUICKSTART.md (Common Commands) |
 | How to troubleshoot issues | QUICKSTART.md (Troubleshooting) |
-| How WenPM is built | DEVELOPMENT_PLAN.md |
+| How Wenget is built | DEVELOPMENT_PLAN.md |
 | How to contribute packages | SOURCES.md (Contributing) |
 
 ## 🌟 Recommended Reading Order
 
 ### For New Users:
-1. **QUICKSTART.md** - Get WenPM running in 5 minutes
+1. **QUICKSTART.md** - Get Wenget running in 5 minutes
 2. **sources-essential.txt** - Import your first packages
 3. **SOURCES.md** - Explore more tools
 
 ### For Power Users:
 1. **SOURCES.md** - Discover all available tools
-2. **wenpm-sources.txt** - Import comprehensive collection
+2. **wenget-sources.txt** - Import comprehensive collection
 3. Create your own sources list!
 
 ### For Contributors:
@@ -168,18 +168,18 @@ wenpm source del package-name
 - Comments start with `#`
 - You can create your own source lists and share them
 - Source lists can be imported from URLs or local files
-- Use `wenpm source export` to backup your sources
+- Use `wenget source export` to backup your sources
 
 ## 🔗 External Resources
 
-- **GitHub Repository**: https://github.com/superyngo/WenPM
-- **Issue Tracker**: https://github.com/superyngo/WenPM/issues
+- **GitHub Repository**: https://github.com/superyngo/Wenget
+- **Issue Tracker**: https://github.com/superyngo/Wenget/issues
 - **Cate**: https://github.com/superyngo/cate
 - **Wedi**: https://github.com/superyngo/wedi
 
 ## 📧 Support
 
-- Found a bug? [Open an issue](https://github.com/superyngo/WenPM/issues)
+- Found a bug? [Open an issue](https://github.com/superyngo/Wenget/issues)
 - Have a question? Check [QUICKSTART.md](QUICKSTART.md#troubleshooting)
 - Want to contribute? See [SOURCES.md](SOURCES.md#contributing)
 
