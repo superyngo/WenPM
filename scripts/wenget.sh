@@ -301,13 +301,18 @@ cmd_listsources() {
         die "Failed to fetch package list"
     fi
 
+    # Extract platform components (os-arch, ignore musl/gnu variant)
+    local os=$(echo "$platform" | cut -d- -f1)
+    local arch=$(echo "$platform" | cut -d- -f2)
+    local platform_key="${os}-${arch}"
+
     echo ""
-    echo -e "${BOLD}Available packages for ${CYAN}${platform}${RESET}:"
+    echo -e "${BOLD}Available packages for ${CYAN}${platform_key}${RESET}:"
     echo ""
 
     if has_command "jq"; then
         # Use jq for better formatting
-        echo "$manifest" | jq -r --arg platform "$platform" \
+        echo "$manifest" | jq -r --arg platform "$platform_key" \
             '.packages[] | select(.platforms | has($platform)) |
             "  \u001b[32m•\u001b[0m \u001b[1m\(.name)\u001b[0m - \(.description)"'
     else
@@ -356,27 +361,25 @@ cmd_install() {
     # Parse package info
     local download_url=""
 
+    # Extract platform components (os-arch, ignore musl/gnu variant)
+    local os=$(echo "$platform" | cut -d- -f1)
+    local arch=$(echo "$platform" | cut -d- -f2)
+    local platform_key="${os}-${arch}"
+
     if has_command "jq"; then
-        # Try musl first, then gnu, then any variant
-        for variant in "-musl" "-gnu" ""; do
-            local platform_key="${platform%%-*}-${platform#*-}${variant}"
-            platform_key="${platform_key%-}"  # Remove trailing dash
-
-            download_url=$(echo "$manifest" | jq -r \
-                --arg name "$package_name" \
-                --arg platform "$platform_key" \
-                '.packages[] | select(.name == $name) | .platforms[$platform].url // empty' 2>/dev/null)
-
-            if [ -n "$download_url" ] && [ "$download_url" != "null" ]; then
-                break
-            fi
-        done
+        download_url=$(echo "$manifest" | jq -r \
+            --arg name "$package_name" \
+            --arg platform "$platform_key" \
+            '.packages[] | select(.name == $name) | .platforms[$platform].url // empty' 2>/dev/null)
     else
         log_warn "jq not found, using basic parsing (may be less reliable)"
-        # Simple fallback - just try to find the URL
-        download_url=$(echo "$manifest" | grep -A 10 "\"name\"[[:space:]]*:[[:space:]]*\"${package_name}\"" | \
-                      grep -o '"url"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | \
-                      sed 's/"url"[[:space:]]*:[[:space:]]*"\([^"]*\)"/\1/')
+
+        # Search for the package and then the platform-specific URL
+        download_url=$(echo "$manifest" | \
+            grep -A 50 "\"name\"[[:space:]]*:[[:space:]]*\"${package_name}\"" | \
+            grep -A 5 "\"${platform_key}\"" | \
+            grep -o '"url"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | \
+            sed 's/"url"[[:space:]]*:[[:space:]]*:[[:space:]]*"\([^"]*\)"/\1/')
     fi
 
     if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
