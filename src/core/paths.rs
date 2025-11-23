@@ -1,20 +1,20 @@
-//! Path management for WenPM
+//! Path management for Wenget
 //!
-//! This module provides utilities for managing all WenPM-related paths:
-//! - Root directory: ~/.wenpm/
-//! - Sources manifest: ~/.wenpm/sources.json
-//! - Installed manifest: ~/.wenpm/installed.json
-//! - Apps directory: ~/.wenpm/apps/
-//! - Bin directory: ~/.wenpm/bin/
-//! - Cache directory: ~/.wenpm/cache/
+//! This module provides utilities for managing all Wenget-related paths:
+//! - Root directory: ~/.wenget/
+//! - Sources manifest: ~/.wenget/sources.json
+//! - Installed manifest: ~/.wenget/installed.json
+//! - Apps directory: ~/.wenget/apps/
+//! - Bin directory: ~/.wenget/bin/
+//! - Cache directory: ~/.wenget/cache/
 
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
-/// WenPM paths manager
+/// Wenget paths manager
 #[derive(Debug, Clone)]
 pub struct WenPaths {
-    /// Root directory (~/.wenpm/)
+    /// Root directory (~/.wenget/)
     root: PathBuf,
 }
 
@@ -25,62 +25,62 @@ impl WenPaths {
     /// Returns an error if the home directory cannot be determined
     pub fn new() -> Result<Self> {
         let home = dirs::home_dir().context("Failed to determine home directory")?;
-        let root = home.join(".wenpm");
+        let root = home.join(".wenget");
         Ok(Self { root })
     }
 
-    /// Get the root directory (~/.wenpm/)
+    /// Get the root directory (~/.wenget/)
     pub fn root(&self) -> &Path {
         &self.root
     }
 
-    /// Get the sources manifest path (~/.wenpm/sources.json)
+    /// Get the sources manifest path (~/.wenget/sources.json)
     pub fn sources_json(&self) -> PathBuf {
         self.root.join("sources.json")
     }
 
-    /// Get the installed manifest path (~/.wenpm/installed.json)
+    /// Get the installed manifest path (~/.wenget/installed.json)
     pub fn installed_json(&self) -> PathBuf {
         self.root.join("installed.json")
     }
 
-    /// Get the buckets config path (~/.wenpm/buckets.json)
+    /// Get the buckets config path (~/.wenget/buckets.json)
     pub fn buckets_json(&self) -> PathBuf {
         self.root.join("buckets.json")
     }
 
-    /// Get the manifest cache path (~/.wenpm/manifest-cache.json)
+    /// Get the manifest cache path (~/.wenget/manifest-cache.json)
     pub fn manifest_cache_json(&self) -> PathBuf {
         self.root.join("manifest-cache.json")
     }
 
-    /// Get the apps directory (~/.wenpm/apps/)
+    /// Get the apps directory (~/.wenget/apps/)
     pub fn apps_dir(&self) -> PathBuf {
         self.root.join("apps")
     }
 
-    /// Get a specific app's directory (~/.wenpm/apps/{name}/)
+    /// Get a specific app's directory (~/.wenget/apps/{name}/)
     pub fn app_dir(&self, name: &str) -> PathBuf {
         self.apps_dir().join(name)
     }
 
-    /// Get a specific app's bin directory (~/.wenpm/apps/{name}/bin/)
+    /// Get a specific app's bin directory (~/.wenget/apps/{name}/bin/)
     #[allow(dead_code)]
     pub fn app_bin_dir(&self, name: &str) -> PathBuf {
         self.app_dir(name).join("bin")
     }
 
-    /// Get the bin directory (~/.wenpm/bin/)
+    /// Get the bin directory (~/.wenget/bin/)
     pub fn bin_dir(&self) -> PathBuf {
         self.root.join("bin")
     }
 
-    /// Get the cache directory (~/.wenpm/cache/)
+    /// Get the cache directory (~/.wenget/cache/)
     pub fn cache_dir(&self) -> PathBuf {
         self.root.join("cache")
     }
 
-    /// Get the downloads directory (~/.wenpm/cache/downloads/)
+    /// Get the downloads directory (~/.wenget/cache/downloads/)
     pub fn downloads_dir(&self) -> PathBuf {
         self.cache_dir().join("downloads")
     }
@@ -88,12 +88,12 @@ impl WenPaths {
     /// Initialize all required directories
     ///
     /// Creates the following directories if they don't exist:
-    /// - ~/.wenpm/
-    /// - ~/.wenpm/apps/
-    /// - ~/.wenpm/bin/
-    /// - ~/.wenpm/cache/downloads/
+    /// - ~/.wenget/
+    /// - ~/.wenget/apps/
+    /// - ~/.wenget/bin/
+    /// - ~/.wenget/cache/downloads/
     pub fn init_dirs(&self) -> Result<()> {
-        std::fs::create_dir_all(&self.root).context("Failed to create WenPM root directory")?;
+        std::fs::create_dir_all(&self.root).context("Failed to create Wenget root directory")?;
 
         std::fs::create_dir_all(self.apps_dir()).context("Failed to create apps directory")?;
 
@@ -105,15 +105,15 @@ impl WenPaths {
         Ok(())
     }
 
-    /// Check if WenPM is initialized (root directory exists)
+    /// Check if Wenget is initialized (root directory exists)
     pub fn is_initialized(&self) -> bool {
         self.root.exists()
     }
 
     /// Get the symlink/shim path for an app in the bin directory
     ///
-    /// On Unix: ~/.wenpm/bin/{name}
-    /// On Windows: ~/.wenpm/bin/{name}.cmd
+    /// On Unix: ~/.wenget/bin/{name}
+    /// On Windows: ~/.wenget/bin/{name}.cmd
     pub fn bin_shim_path(&self, name: &str) -> PathBuf {
         #[cfg(windows)]
         {
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn test_paths_creation() {
         let paths = WenPaths::new().unwrap();
-        assert!(paths.root().ends_with(".wenpm"));
+        assert!(paths.root().ends_with(".wenget"));
         assert!(paths.sources_json().ends_with("sources.json"));
         assert!(paths.installed_json().ends_with("installed.json"));
     }

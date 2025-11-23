@@ -1,4 +1,4 @@
-//! Manifest data structures for WenPM
+//! Manifest data structures for Wenget
 //!
 //! This module defines the core data structures for package metadata:
 //! - `Package`: Individual package information
@@ -216,7 +216,7 @@ mod tests {
             version: "1.0.0".to_string(),
             platform: "windows-x86_64".to_string(),
             installed_at: Utc::now(),
-            install_path: "C:\\Users\\test\\.wenpm\\apps\\test".to_string(),
+            install_path: "C:\\Users\\test\\.wenget\\apps\\test".to_string(),
             files: vec!["bin/test.exe".to_string()],
         };
 

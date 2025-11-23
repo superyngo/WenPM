@@ -32,7 +32,7 @@ pub fn run(names: Vec<String>, yes: bool, force: bool) -> Result<()> {
 
     if names.is_empty() {
         println!("{}", "No package names provided".yellow());
-        println!("Usage: wenpm delete <name>...");
+        println!("Usage: wenget delete <name>...");
         return Ok(());
     }
 
@@ -58,9 +58,9 @@ pub fn run(names: Vec<String>, yes: bool, force: bool) -> Result<()> {
         return Ok(());
     }
 
-    // Check for wenpm self-deletion
-    if matching_packages.contains(&"wenpm".to_string()) && !force {
-        println!("{}", "Cannot delete wenpm itself".red());
+    // Check for wenget self-deletion
+    if matching_packages.contains(&"wenget".to_string()) && !force {
+        println!("{}", "Cannot delete wenget itself".red());
         println!("Use --force if you really want to delete it");
         return Ok(());
     }
@@ -150,25 +150,25 @@ fn delete_package(
     Ok(())
 }
 
-/// Delete WenPM itself (complete uninstallation)
+/// Delete Wenget itself (complete uninstallation)
 fn delete_self(yes: bool) -> Result<()> {
-    println!("{}", "WenPM Self-Deletion".bold().red());
+    println!("{}", "Wenget Self-Deletion".bold().red());
     println!("{}", "═".repeat(60));
     println!();
     println!(
         "{}",
-        "This will COMPLETELY remove WenPM from your system:".yellow()
+        "This will COMPLETELY remove Wenget from your system:".yellow()
     );
     println!();
 
     let paths = WenPaths::new()?;
 
-    println!("  {} All WenPM directories and files:", "1.".bold());
+    println!("  {} All Wenget directories and files:", "1.".bold());
     println!("     {}", paths.root().display());
     println!();
-    println!("  {} WenPM from PATH environment variable", "2.".bold());
+    println!("  {} Wenget from PATH environment variable", "2.".bold());
     println!();
-    println!("  {} The wenpm executable itself", "3.".bold());
+    println!("  {} The wenget executable itself", "3.".bold());
 
     // Get current executable path
     let exe_path = env::current_exe().context("Failed to get current executable path")?;
@@ -206,17 +206,17 @@ fn delete_self(yes: bool) -> Result<()> {
     }
     println!();
 
-    // Check if executable is inside .wenpm directory
-    let exe_in_wenpm = exe_path.starts_with(paths.root());
+    // Check if executable is inside .wenget directory
+    let exe_in_wenget = exe_path.starts_with(paths.root());
 
-    // Step 2: Delete WenPM directories
-    println!("{} Deleting WenPM directories...", "2.".bold());
-    if exe_in_wenpm {
+    // Step 2: Delete Wenget directories
+    println!("{} Deleting Wenget directories...", "2.".bold());
+    if exe_in_wenget {
         println!(
-            "   {} Scheduled for deletion (executable is inside .wenpm)",
+            "   {} Scheduled for deletion (executable is inside .wenget)",
             "✓".yellow()
         );
-        println!("      Directory will be deleted after wenpm exits");
+        println!("      Directory will be deleted after wenget exits");
     } else if paths.root().exists() {
         match fs::remove_dir_all(paths.root()) {
             Ok(()) => println!("   {} Deleted: {}", "✓".green(), paths.root().display()),
@@ -228,21 +228,21 @@ fn delete_self(yes: bool) -> Result<()> {
     println!();
 
     // Step 3: Delete the executable
-    println!("{} Deleting wenpm executable...", "3.".bold());
-    delete_executable(&exe_path, exe_in_wenpm, paths.root())?;
+    println!("{} Deleting wenget executable...", "3.".bold());
+    delete_executable(&exe_path, exe_in_wenget, paths.root())?;
 
     println!();
     println!("{}", "═".repeat(60));
     println!();
-    println!("{}", "WenPM has been uninstalled.".green().bold());
+    println!("{}", "Wenget has been uninstalled.".green().bold());
     println!();
-    println!("{}", "Thank you for using WenPM!".cyan());
+    println!("{}", "Thank you for using Wenget!".cyan());
     println!();
 
     Ok(())
 }
 
-/// Remove WenPM bin directory from PATH
+/// Remove Wenget bin directory from PATH
 fn remove_from_path(bin_dir: &Path) -> Result<()> {
     let bin_dir_str = bin_dir.to_string_lossy();
 
@@ -315,18 +315,18 @@ fn remove_from_path_unix(bin_dir: &str) -> Result<()> {
     Ok(())
 }
 
-/// Remove WenPM PATH entry from a shell configuration file
+/// Remove Wenget PATH entry from a shell configuration file
 #[cfg(not(windows))]
 fn remove_from_shell_config(config_path: &Path, bin_dir: &str) -> Result<()> {
     let content = fs::read_to_string(config_path)
         .with_context(|| format!("Failed to read {}", config_path.display()))?;
 
-    // Remove lines containing the WenPM PATH entry
+    // Remove lines containing the Wenget PATH entry
     let new_content: String = content
         .lines()
         .filter(|line| {
-            // Skip lines that contain the WenPM bin directory or WenPM comment
-            !line.contains(bin_dir) && !line.contains("# WenPM")
+            // Skip lines that contain the Wenget bin directory or Wenget comment
+            !line.contains(bin_dir) && !line.contains("# Wenget")
         })
         .collect::<Vec<_>>()
         .join("\n");
@@ -341,15 +341,15 @@ fn remove_from_shell_config(config_path: &Path, bin_dir: &str) -> Result<()> {
 }
 
 /// Delete the executable (platform-specific implementation)
-fn delete_executable(exe_path: &Path, exe_in_wenpm: bool, wenpm_root: &Path) -> Result<()> {
+fn delete_executable(exe_path: &Path, exe_in_wenget: bool, wenget_root: &Path) -> Result<()> {
     #[cfg(windows)]
     {
-        delete_executable_windows(exe_path, exe_in_wenpm, wenpm_root)
+        delete_executable_windows(exe_path, exe_in_wenget, wenget_root)
     }
 
     #[cfg(not(windows))]
     {
-        delete_executable_unix(exe_path, exe_in_wenpm, wenpm_root)
+        delete_executable_unix(exe_path, exe_in_wenget, wenget_root)
     }
 }
 
@@ -359,26 +359,26 @@ fn delete_executable(exe_path: &Path, exe_in_wenpm: bool, wenpm_root: &Path) -> 
 #[cfg(windows)]
 fn delete_executable_windows(
     exe_path: &Path,
-    exe_in_wenpm: bool,
-    wenpm_root: &Path,
+    exe_in_wenget: bool,
+    wenget_root: &Path,
 ) -> Result<()> {
     use std::process::Command;
 
     // Create a temporary batch script to delete the executable after exit
     let temp_dir = env::temp_dir();
-    let script_path = temp_dir.join("wenpm_uninstall.bat");
+    let script_path = temp_dir.join("wenget_uninstall.bat");
 
     let exe_path_str = exe_path.to_string_lossy();
-    let script_content = if exe_in_wenpm {
-        // If executable is inside .wenpm, delete the entire directory
-        let wenpm_root_str = wenpm_root.to_string_lossy();
+    let script_content = if exe_in_wenget {
+        // If executable is inside .wenget, delete the entire directory
+        let wenget_root_str = wenget_root.to_string_lossy();
         format!(
             r#"@echo off
 timeout /t 2 /nobreak >nul
 rd /s /q "{}"
 del /f /q "%~f0"
 "#,
-            wenpm_root_str
+            wenget_root_str
         )
     } else {
         // Otherwise just delete the executable
@@ -410,24 +410,24 @@ del /f /q "%~f0"
 
 /// Delete executable on Unix
 #[cfg(not(windows))]
-fn delete_executable_unix(exe_path: &Path, exe_in_wenpm: bool, wenpm_root: &Path) -> Result<()> {
+fn delete_executable_unix(exe_path: &Path, exe_in_wenget: bool, wenget_root: &Path) -> Result<()> {
     use std::process::Command;
 
     // Create a shell script to delete the executable after exit
     let temp_dir = env::temp_dir();
-    let script_path = temp_dir.join("wenpm_uninstall.sh");
+    let script_path = temp_dir.join("wenget_uninstall.sh");
 
     let exe_path_str = exe_path.to_string_lossy();
-    let script_content = if exe_in_wenpm {
-        // If executable is inside .wenpm, delete the entire directory
-        let wenpm_root_str = wenpm_root.to_string_lossy();
+    let script_content = if exe_in_wenget {
+        // If executable is inside .wenget, delete the entire directory
+        let wenget_root_str = wenget_root.to_string_lossy();
         format!(
             r#"#!/bin/sh
 sleep 2
 rm -rf "{}"
 rm -f "$0"
 "#,
-            wenpm_root_str
+            wenget_root_str
         )
     } else {
         // Otherwise just delete the executable
