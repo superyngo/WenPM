@@ -19,23 +19,17 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Manage package sources
-    Source {
-        #[command(subcommand)]
-        command: SourceCommands,
-    },
-
     /// Manage buckets (remote manifest sources)
     Bucket {
         #[command(subcommand)]
         command: BucketCommands,
     },
 
-    /// Install packages
-    #[command(visible_alias = "add")]
+    /// Add (install) packages from cache or GitHub URL
+    #[command(visible_alias = "install")]
     #[command(visible_alias = "a")]
-    Install {
-        /// Package names to install (supports wildcards *)
+    Add {
+        /// Package names or GitHub URLs to add (supports wildcards *)
         names: Vec<String>,
 
         /// Skip confirmation prompts
@@ -45,7 +39,17 @@ pub enum Commands {
 
     /// List installed packages
     #[command(visible_alias = "ls")]
-    List,
+    List {
+        /// Show all available packages from buckets (not just installed)
+        #[arg(short = 'a', long = "all")]
+        all: bool,
+    },
+
+    /// Show package information from cache or GitHub URL
+    Info {
+        /// Package names or GitHub URLs to show (supports wildcards * for cache queries)
+        names: Vec<String>,
+    },
 
     /// Search for packages
     #[command(visible_alias = "s")]
@@ -65,10 +69,10 @@ pub enum Commands {
         yes: bool,
     },
 
-    /// Remove installed packages
-    #[command(visible_alias = "del")]
-    Remove {
-        /// Package names to remove (supports wildcards *)
+    /// Delete (remove) installed packages
+    #[command(visible_alias = "remove")]
+    Del {
+        /// Package names to delete (supports wildcards *)
         names: Vec<String>,
 
         /// Skip confirmation prompts
@@ -85,50 +89,6 @@ pub enum Commands {
         /// Skip confirmation prompts
         #[arg(short = 'y', long)]
         yes: bool,
-    },
-}
-
-#[derive(Subcommand)]
-pub enum SourceCommands {
-    /// Add packages from GitHub repository URLs
-    Add {
-        /// GitHub repository URLs (can specify multiple)
-        urls: Vec<String>,
-    },
-
-    /// Delete packages from sources
-    Del {
-        /// Package names or URLs to delete
-        names: Vec<String>,
-    },
-
-    /// Import packages from a file or URL
-    Import {
-        /// Path to file or URL containing repository URLs (one per line)
-        source: String,
-    },
-
-    /// Export package URLs or package info
-    Export {
-        /// Output file path (prints to stdout if not specified)
-        #[arg(short, long)]
-        output: Option<String>,
-
-        /// Export format: txt (URLs) or json (package info)
-        #[arg(short, long, default_value = "txt")]
-        format: String,
-    },
-
-    /// Refresh package metadata from sources
-    Refresh,
-
-    /// List available packages from sources
-    List,
-
-    /// Show package information
-    Info {
-        /// Package names to show (supports wildcards *)
-        names: Vec<String>,
     },
 }
 

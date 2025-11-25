@@ -1,7 +1,6 @@
 //! Configuration management for WenPM
 //!
 //! This module handles:
-//! - Loading and saving sources.json
 //! - Loading and saving installed.json
 //! - Loading and saving buckets.json
 //! - Loading and saving manifest-cache.json
@@ -37,10 +36,6 @@ impl Config {
         self.paths.init_dirs()?;
 
         // Create empty manifests if they don't exist
-        if !self.paths.sources_json().exists() {
-            self.save_sources(&SourceManifest::new())?;
-        }
-
         if !self.paths.installed_json().exists() {
             self.save_installed(&InstalledManifest::new())?;
         }
@@ -50,21 +45,7 @@ impl Config {
 
     /// Check if WenPM is initialized
     pub fn is_initialized(&self) -> bool {
-        self.paths.is_initialized()
-            && self.paths.sources_json().exists()
-            && self.paths.installed_json().exists()
-    }
-
-    /// Load sources manifest
-    pub fn load_sources(&self) -> Result<SourceManifest> {
-        let path = self.paths.sources_json();
-        Self::load_json(&path).context("Failed to load sources.json")
-    }
-
-    /// Save sources manifest
-    pub fn save_sources(&self, manifest: &SourceManifest) -> Result<()> {
-        let path = self.paths.sources_json();
-        Self::save_json(&path, manifest).context("Failed to save sources.json")
+        self.paths.is_initialized() && self.paths.installed_json().exists()
     }
 
     /// Load installed manifest
@@ -97,14 +78,6 @@ impl Config {
             .with_context(|| format!("Failed to write file: {}", path.display()))?;
 
         Ok(())
-    }
-
-    /// Get or create sources manifest (auto-initialize if needed)
-    pub fn get_or_create_sources(&self) -> Result<SourceManifest> {
-        if !self.is_initialized() {
-            self.init()?;
-        }
-        self.load_sources()
     }
 
     /// Get or create installed manifest (auto-initialize if needed)
@@ -171,12 +144,11 @@ impl Config {
         self.rebuild_cache()
     }
 
-    /// Force rebuild manifest cache from sources and buckets
+    /// Force rebuild manifest cache from buckets only
     pub fn rebuild_cache(&self) -> Result<ManifestCache> {
         use crate::cache::build_cache;
         use crate::utils::HttpClient;
 
-        let local_manifest = self.get_or_create_sources()?;
         let bucket_config = self.get_or_create_buckets()?;
 
         // Fetch bucket manifests
@@ -195,7 +167,7 @@ impl Config {
             Ok(manifest)
         };
 
-        let cache = build_cache(&local_manifest, &bucket_config, fetch_bucket)?;
+        let cache = build_cache(&bucket_config, fetch_bucket)?;
 
         // Save cache
         self.save_cache(&cache)?;
@@ -203,18 +175,11 @@ impl Config {
         Ok(cache)
     }
 
-    /// Get packages from cache (preferred) or local sources (fallback)
+    /// Get packages from cache
     /// This is the recommended way to get packages for read operations
     pub fn get_packages_from_cache(&self) -> Result<SourceManifest> {
-        // Try to get from cache
-        match self.get_or_rebuild_cache() {
-            Ok(cache) => Ok(cache.to_source_manifest()),
-            Err(e) => {
-                // Fallback to local sources if cache fails
-                log::warn!("Failed to load cache, falling back to local sources: {}", e);
-                self.get_or_create_sources()
-            }
-        }
+        let cache = self.get_or_rebuild_cache()?;
+        Ok(cache.to_source_manifest())
     }
 }
 
@@ -259,10 +224,10 @@ mod tests {
         let config = Config::new().unwrap();
         config.init().unwrap();
 
-        let manifest = SourceManifest::new();
-        config.save_sources(&manifest).unwrap();
+        let manifest = InstalledManifest::new();
+        config.save_installed(&manifest).unwrap();
 
-        let loaded = config.load_sources().unwrap();
+        let loaded = config.load_installed().unwrap();
         assert_eq!(loaded.packages.len(), manifest.packages.len());
     }
 }

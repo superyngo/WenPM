@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use colored::Colorize;
 use std::env;
 use std::io::{self, Write as IoWrite};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(not(windows))]
 use std::fs::{self, OpenOptions};
@@ -57,8 +57,8 @@ pub fn run(yes: bool) -> Result<()> {
     println!("  Cache:     {}", config.paths().cache_dir().display());
     println!();
     println!("Created manifests:");
-    println!("  Sources:   {}", config.paths().sources_json().display());
     println!("  Installed: {}", config.paths().installed_json().display());
+    println!("  Buckets:   {}", config.paths().buckets_json().display());
     println!();
 
     // Setup wenget executable itself
@@ -84,7 +84,7 @@ pub fn run(yes: bool) -> Result<()> {
 
 /// Create wenget shim with absolute path (Windows)
 #[cfg(windows)]
-fn create_wenget_shim(target: &PathBuf, shim: &PathBuf) -> Result<()> {
+fn create_wenget_shim(target: &Path, shim: &Path) -> Result<()> {
     use std::fs;
 
     log::debug!("Creating wenget shim: {}", shim.display());

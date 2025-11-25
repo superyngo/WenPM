@@ -154,10 +154,6 @@ impl SourceProvider for GitHubProvider {
         Ok(package)
     }
 
-    fn can_handle(&self, url: &str) -> bool {
-        url.contains("github.com")
-    }
-
     fn name(&self) -> &str {
         "GitHub"
     }
@@ -221,13 +217,6 @@ mod tests {
             .unwrap();
         assert_eq!(owner, "user");
         assert_eq!(repo, "repo");
-    }
-
-    #[test]
-    fn test_can_handle() {
-        let provider = GitHubProvider::new().unwrap();
-        assert!(provider.can_handle("https://github.com/user/repo"));
-        assert!(!provider.can_handle("https://gitlab.com/user/repo"));
     }
 
     #[test]

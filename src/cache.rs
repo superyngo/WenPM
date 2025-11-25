@@ -1,42 +1,16 @@
 //! Manifest cache management for WenPM
 //!
-//! The cache merges local sources and bucket sources into a unified view.
+//! The cache fetches and merges bucket sources into a unified view.
 //! This reduces GitHub API calls and improves performance.
 
 use crate::bucket::{Bucket, BucketConfig};
-use crate::core::{Package, SourceManifest};
+use crate::core::manifest::{Package, PackageSource, SourceManifest};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-
-/// Package source origin
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "type", rename_all = "lowercase")]
-pub enum PackageSource {
-    /// From local sources
-    Local,
-    /// From a bucket
-    Bucket { name: String },
-}
-
-impl PackageSource {
-    /// Create a bucket source
-    pub fn bucket(name: String) -> Self {
-        Self::Bucket { name }
-    }
-
-    /// Get display name
-    #[allow(dead_code)]
-    pub fn display(&self) -> String {
-        match self {
-            Self::Local => "local".to_string(),
-            Self::Bucket { name } => format!("bucket:{}", name),
-        }
-    }
-}
 
 /// Package with source information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,16 +156,15 @@ impl Default for ManifestCache {
     }
 }
 
-/// Build cache from local sources and buckets
+/// Build cache from buckets only
 pub fn build_cache(
-    local_manifest: &SourceManifest,
     bucket_config: &BucketConfig,
     fetch_bucket_fn: impl Fn(&Bucket) -> Result<SourceManifest>,
 ) -> Result<ManifestCache> {
     let mut cache = ManifestCache::new();
     cache.last_updated = Utc::now();
 
-    // 1. Add packages from buckets first (lower priority)
+    // Add packages from all enabled buckets
     let enabled_buckets = bucket_config.enabled_buckets();
 
     for bucket in enabled_buckets {
@@ -204,14 +177,21 @@ pub fn build_cache(
 
                 // Add packages
                 for package in manifest.packages {
-                    cache.add_package(package, PackageSource::bucket(bucket.name.clone()));
+                    cache.add_package(
+                        package,
+                        PackageSource::Bucket {
+                            name: bucket.name.clone(),
+                        },
+                    );
                 }
 
                 // Record source info
                 cache.sources.insert(
                     source_key,
                     CachedSourceInfo {
-                        source: PackageSource::bucket(bucket.name.clone()),
+                        source: PackageSource::Bucket {
+                            name: bucket.name.clone(),
+                        },
                         package_count,
                         last_fetched: Some(now),
                         url: Some(bucket.url.clone()),
@@ -224,23 +204,6 @@ pub fn build_cache(
             }
         }
     }
-
-    // 2. Add packages from local sources (higher priority, will overwrite bucket packages)
-    let local_count = local_manifest.packages.len();
-    for package in &local_manifest.packages {
-        cache.add_package(package.clone(), PackageSource::Local);
-    }
-
-    // Record local source info
-    cache.sources.insert(
-        "local".to_string(),
-        CachedSourceInfo {
-            source: PackageSource::Local,
-            package_count: local_count,
-            last_fetched: None,
-            url: None,
-        },
-    );
 
     Ok(cache)
 }
@@ -271,12 +234,15 @@ mod tests {
             platforms: HashMap::new(),
         };
 
-        cache.add_package(package.clone(), PackageSource::Local);
+        let source = PackageSource::Bucket {
+            name: "test-bucket".to_string(),
+        };
+        cache.add_package(package.clone(), source.clone());
         assert_eq!(cache.packages.len(), 1);
 
         let cached = cache.find_package("test").unwrap();
         assert_eq!(cached.package.name, "test");
-        assert_eq!(cached.source, PackageSource::Local);
+        assert_eq!(cached.source, source);
     }
 
     #[test]
@@ -289,14 +255,5 @@ mod tests {
         // Expired cache should be invalid
         cache.last_updated = Utc::now() - chrono::Duration::days(2);
         assert!(!cache.is_valid());
-    }
-
-    #[test]
-    fn test_package_source_display() {
-        let local = PackageSource::Local;
-        assert_eq!(local.display(), "local");
-
-        let bucket = PackageSource::bucket("official".to_string());
-        assert_eq!(bucket.display(), "bucket:official");
     }
 }

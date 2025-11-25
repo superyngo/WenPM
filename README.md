@@ -68,26 +68,21 @@ wenget delete ripgrep
 
 ### Package Management
 
-- `wenget add <name>...` - Install packages
+- `wenget add <name|url>...` - Install packages (from bucket or GitHub URL)
+- `wenget info <name|url>` - Show package information
 - `wenget delete <name>...` - Uninstall packages
   - `wenget del self` - Uninstall Wenget itself
-- `wenget list` - List installed packages
+- `wenget list` - List installed packages (with source and description)
+  - `wenget list --all` - Show all available packages from buckets
 - `wenget search <keyword>` - Search available packages
-- `wenget update` - Update package metadata from all buckets
+- `wenget update [name]` - Update installed packages
 
 ### Bucket Management
 
 - `wenget bucket add <name> <url>` - Add a bucket
-- `wenget bucket remove <name>` - Remove a bucket
+- `wenget bucket del <name>` - Remove a bucket
 - `wenget bucket list` - List all buckets
 - `wenget bucket refresh` - Rebuild package cache
-
-### Source Management (Legacy)
-
-- `wenget source add <url>...` - Add package sources
-- `wenget source list` - List package sources
-- `wenget source export -o <file>` - Export sources
-- `wenget source import <file>` - Import sources
 
 ### System
 
@@ -112,10 +107,10 @@ wenget delete ripgrep
 │   ├── wenget             # Wenget symlink (Unix)
 │   └── <package>.cmd     # Package shims
 ├── cache/                 # Download and package cache
-│   └── packages.json     # Cached package list
+│   ├── manifest-cache.json  # Cached package list
+│   └── downloads/        # Downloaded archives
 ├── buckets.json          # Bucket configuration
-├── sources.json          # Package sources (legacy)
-└── installed.json        # Installed packages info
+└── installed.json        # Installed packages info (with descriptions)
 ```
 
 ## Bucket System
@@ -255,16 +250,17 @@ Wenget uses the GitHub API to fetch package information and download binaries. B
 ### Impact on Wenget Operations
 
 **Operations that consume API calls:**
-- `wenget search <keyword>` - 1-2 calls per search
-- `wenget add <package>` - 2 calls per package (release info + asset download)
-- `wenget update` - 1 call per package source
-- `wenget source add <url>` - 2 calls per source (validate repo + fetch releases)
+- `wenget add <url>` - 2 calls per URL (when installing from GitHub URL)
+- `wenget info <url>` - 1 call per URL (when querying GitHub URL)
+- `wenget update` - 1 call per installed package to check for updates
 
 **Operations that don't consume API calls:**
+- `wenget add <name>` - Uses cached bucket data (no API calls)
+- `wenget info <name>` - Uses cached bucket data for bucket packages
 - `wenget list` - Local only
 - `wenget delete` - Local only
 - `wenget bucket list/add/remove` - Local only
-- Bucket-based installs use cached package information
+- `wenget search` - Uses cached bucket data
 
 ### Recommendations
 
@@ -462,6 +458,22 @@ Inspired by:
 - **Official Bucket**: https://github.com/superyngo/wenget-bucket
 
 ## Changelog
+
+### v0.3.0 (2025-11-25)
+**Major Restructuring Release**
+
+- **Remove `source` command** - Eliminated sources.json and all source management
+- **Smart `add` command** - Auto-detects package names vs GitHub URLs
+- **New `info` command** - Query package details (supports names and URLs)
+- **Enhanced `list` command** - Now shows SOURCE column and descriptions
+- **Package descriptions** - Stored in installed.json for faster access
+- **Integrated resolver** - Name-based operations work for URL-installed packages
+- **Improved UX** - Better alignment and formatting in list output
+
+**Breaking Changes:**
+- `source` command removed entirely
+- installed.json format changed (added description field)
+- Old installed.json files need migration (reinstall packages)
 
 ### v0.2.0 (2025-01-21)
 - Add installation scripts for Windows and Unix

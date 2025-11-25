@@ -65,33 +65,6 @@ impl SourceManifest {
         }
     }
 
-    /// Find a package by name
-    pub fn find_package(&self, name: &str) -> Option<&Package> {
-        self.packages.iter().find(|p| p.name == name)
-    }
-
-    /// Find a package by name (mutable)
-    #[allow(dead_code)]
-    pub fn find_package_mut(&mut self, name: &str) -> Option<&mut Package> {
-        self.packages.iter_mut().find(|p| p.name == name)
-    }
-
-    /// Add a package
-    pub fn add_package(&mut self, package: Package) -> bool {
-        if self.find_package(&package.name).is_some() {
-            return false; // Package already exists
-        }
-        self.packages.push(package);
-        true
-    }
-
-    /// Remove a package by name
-    pub fn remove_package(&mut self, name: &str) -> bool {
-        let original_len = self.packages.len();
-        self.packages.retain(|p| p.name != name);
-        self.packages.len() < original_len
-    }
-
     /// Get packages that support a specific platform
     #[allow(dead_code)]
     pub fn packages_for_platform(&self, platform: &str) -> Vec<&Package> {
@@ -106,6 +79,16 @@ impl Default for SourceManifest {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Package source tracking
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum PackageSource {
+    /// Package installed from a bucket
+    Bucket { name: String },
+    /// Package installed directly from a GitHub repository URL
+    DirectRepo { url: String },
 }
 
 /// Installed package information
@@ -125,6 +108,12 @@ pub struct InstalledPackage {
 
     /// List of installed files (relative to install_path)
     pub files: Vec<String>,
+
+    /// Package source (where it was installed from)
+    pub source: PackageSource,
+
+    /// Package description
+    pub description: String,
 }
 
 /// Installed manifest (installed.json)
@@ -186,29 +175,6 @@ mod tests {
     }
 
     #[test]
-    fn test_source_manifest_add_package() {
-        let mut manifest = SourceManifest::new();
-
-        let package = Package {
-            name: "test".to_string(),
-            description: "Test package".to_string(),
-            repo: "https://github.com/test/test".to_string(),
-            homepage: None,
-            license: Some("MIT".to_string()),
-            platforms: HashMap::new(),
-        };
-
-        // First add should succeed
-        assert!(manifest.add_package(package.clone()));
-        assert_eq!(manifest.packages.len(), 1);
-        assert_eq!(manifest.find_package("test").unwrap().name, "test");
-
-        // Second add should fail (duplicate)
-        assert!(!manifest.add_package(package));
-        assert_eq!(manifest.packages.len(), 1);
-    }
-
-    #[test]
     fn test_installed_manifest() {
         let mut manifest = InstalledManifest::new();
 
@@ -218,6 +184,10 @@ mod tests {
             installed_at: Utc::now(),
             install_path: "C:\\Users\\test\\.wenget\\apps\\test".to_string(),
             files: vec!["bin/test.exe".to_string()],
+            source: PackageSource::Bucket {
+                name: "test-bucket".to_string(),
+            },
+            description: "Test package".to_string(),
         };
 
         manifest.upsert_package("test".to_string(), package);

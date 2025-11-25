@@ -1,119 +1,136 @@
 //! Info command implementation
+//!
+//! Shows detailed package information from cache (with glob support) or GitHub URL
 
-use crate::core::{Config, Platform};
-use crate::providers::GitHubProvider;
+use crate::core::Config;
+use crate::package_resolver::{PackageInput, PackageResolver, ResolvedPackage};
 use anyhow::Result;
 use colored::Colorize;
-use glob::Pattern;
 
 /// Show package information
-pub fn run(patterns: Vec<String>) -> Result<()> {
+pub fn run(names: Vec<String>) -> Result<()> {
     let config = Config::new()?;
+    let resolver = PackageResolver::new(Config::new()?)?;
 
-    // Load manifests
-    let sources = config.get_or_create_sources()?;
+    if names.is_empty() {
+        println!("{}", "No package names or URLs provided".yellow());
+        println!("Usage: wenget info <name|url> [<name|url>...]");
+        println!();
+        println!("Examples:");
+        println!("  wenget info ripgrep              # Query from cache");
+        println!("  wenget info 'rip*'               # Glob pattern (cache only)");
+        println!("  wenget info https://github.com/BurntSushi/ripgrep  # Direct URL");
+        return Ok(());
+    }
+
+    // Load installed packages for status checking
     let installed = config.get_or_create_installed()?;
 
-    // Create GitHub provider to fetch versions
-    let github = GitHubProvider::new()?;
+    let mut total_found = 0;
 
-    if sources.packages.is_empty() {
-        println!("{}", "No packages in sources".yellow());
-        println!("Add packages with: wenpm source add <github-url>");
-        return Ok(());
+    for name in &names {
+        let input = PackageInput::parse(name);
+
+        match resolver.resolve(&input) {
+            Ok(packages) => {
+                for resolved in packages {
+                    if total_found > 0 {
+                        println!();
+                        println!("{}", "─".repeat(80));
+                        println!();
+                    }
+                    display_package_info(&resolved, &installed, &resolver)?;
+                    total_found += 1;
+                }
+            }
+            Err(e) => {
+                eprintln!("{} {}: {}", "Error".red().bold(), name, e);
+            }
+        }
     }
 
-    if patterns.is_empty() {
-        println!("{}", "No package name provided".yellow());
-        println!("Usage: wenpm info <name>...");
-        return Ok(());
-    }
-
-    // Get current platform
-    let platform = Platform::current();
-    let platform_ids = platform.possible_identifiers();
-
-    // Compile glob patterns
-    let glob_patterns: Vec<Pattern> = patterns
-        .iter()
-        .map(|p| Pattern::new(p))
-        .collect::<Result<_, _>>()?;
-
-    // Filter packages
-    let matching_packages: Vec<_> = sources
-        .packages
-        .iter()
-        .filter(|pkg| glob_patterns.iter().any(|pattern| pattern.matches(&pkg.name)))
-        .collect();
-
-    if matching_packages.is_empty() {
+    if total_found == 0 {
+        println!("{}", "No packages found".yellow());
+    } else if total_found > 1 {
+        println!();
         println!(
             "{}",
-            format!("No packages found matching: {:?}", patterns).yellow()
+            format!("Found {} package(s)", total_found).green().bold()
         );
-        return Ok(());
     }
 
-    // Display info for each package
-    for (i, pkg) in matching_packages.iter().enumerate() {
-        if i > 0 {
-            println!();
-            println!("{}", "─".repeat(80));
-            println!();
+    Ok(())
+}
+
+/// Display detailed information for a single package
+fn display_package_info(
+    resolved: &ResolvedPackage,
+    installed: &crate::core::InstalledManifest,
+    resolver: &PackageResolver,
+) -> Result<()> {
+    let pkg = &resolved.package;
+
+    // Header
+    println!("{}", pkg.name.bold().cyan());
+    println!("{}", "─".repeat(60));
+
+    // Basic info
+    println!("{:<16} {}", "Repository:".bold(), pkg.repo);
+
+    if let Some(ref homepage) = pkg.homepage {
+        println!("{:<16} {}", "Homepage:".bold(), homepage);
+    }
+
+    if let Some(ref license) = pkg.license {
+        println!("{:<16} {}", "License:".bold(), license);
+    }
+
+    println!("{:<16} {}", "Description:".bold(), pkg.description);
+
+    // Source
+    match &resolved.source {
+        crate::core::manifest::PackageSource::Bucket { name } => {
+            println!("{:<16} {} ({})", "Source:".bold(), "Bucket".green(), name);
         }
-
-        println!("{}: {}", "Name".bold(), pkg.name.green());
-        println!("{}: {}", "Description".bold(), pkg.description);
-        println!("{}: {}", "Repository".bold(), pkg.repo);
-
-        if let Some(homepage) = &pkg.homepage {
-            println!("{}: {}", "Homepage".bold(), homepage);
+        crate::core::manifest::PackageSource::DirectRepo { url: _ } => {
+            println!("{:<16} {}", "Source:".bold(), "Direct URL".yellow());
         }
+    }
 
-        if let Some(license) = &pkg.license {
-            println!("{}: {}", "License".bold(), license);
-        }
+    // Latest version from GitHub
+    if let Ok(version) = resolver.fetch_latest_version(&pkg.repo) {
+        println!("{:<16} {}", "Latest version:".bold(), version.green());
+    }
 
-        // Fetch latest version
-        let latest_version = github
-            .fetch_latest_version(&pkg.repo)
-            .unwrap_or_else(|_| "unknown".to_string());
+    // Installation status
+    if let Some(inst_pkg) = installed.get_package(&pkg.name) {
+        println!(
+            "{:<16} {} (v{})",
+            "Status:".bold(),
+            "Installed".green(),
+            inst_pkg.version
+        );
+        println!("{:<16} {}", "Installed at:".bold(), inst_pkg.installed_at);
+        println!("{:<16} {}", "Platform:".bold(), inst_pkg.platform);
+        println!("{:<16} {}", "Install path:".bold(), inst_pkg.install_path);
+    } else {
+        println!("{:<16} {}", "Status:".bold(), "Not installed".yellow());
+    }
 
-        println!("{}: {}", "Latest Version".bold(), latest_version);
+    // Supported platforms
+    println!();
+    println!(
+        "{} {} platform(s)",
+        "Supported platforms:".bold(),
+        pkg.platforms.len()
+    );
+    let mut platforms: Vec<_> = pkg.platforms.keys().collect();
+    platforms.sort();
 
-        // Check if installed
-        if let Some(inst_pkg) = installed.get_package(&pkg.name) {
-            println!(
-                "{}: {} ({})",
-                "Installed Version".bold(),
-                inst_pkg.version.green(),
-                if inst_pkg.version == latest_version {
-                    "up to date".green()
-                } else {
-                    "upgrade available".yellow()
-                }
-            );
-            println!("{}: {}", "Installed At".bold(), inst_pkg.installed_at);
-            println!("{}: {}", "Install Path".bold(), inst_pkg.install_path);
-        } else {
-            println!("{}: {}", "Installed".bold(), "No".red());
-        }
-
-        println!();
-        println!("{}", "Supported Platforms:".bold());
-
-        for (platform_id, binary) in &pkg.platforms {
-            let size_mb = binary.size as f64 / 1_000_000.0;
-            let is_current = platform_ids.contains(platform_id);
-
-            let marker = if is_current {
-                format!(" {}", "(current)".cyan())
-            } else {
-                String::new()
-            };
-
-            println!("  • {} - {:.1} MB{}", platform_id, size_mb, marker);
-        }
+    for platform in platforms {
+        let binary = &pkg.platforms[platform];
+        let size_mb = binary.size as f64 / 1024.0 / 1024.0;
+        println!("  {} {:<25} ({:.2} MB)", "•".cyan(), platform, size_mb);
     }
 
     Ok(())

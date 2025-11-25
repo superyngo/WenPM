@@ -14,9 +14,6 @@ pub trait SourceProvider {
     /// Package metadata with latest release information
     fn fetch_package(&self, url: &str) -> Result<Package>;
 
-    /// Check if this provider can handle the given URL
-    fn can_handle(&self, url: &str) -> bool;
-
     /// Get the provider name
     #[allow(dead_code)]
     fn name(&self) -> &str;

@@ -1,6 +1,7 @@
 //! Update (Upgrade) command implementation
 
 use crate::commands::add;
+use crate::core::manifest::PackageSource;
 use crate::core::Config;
 use crate::providers::GitHubProvider;
 use anyhow::Result;
@@ -8,15 +9,12 @@ use colored::Colorize;
 
 /// Upgrade installed packages
 pub fn run(names: Vec<String>, yes: bool) -> Result<()> {
-    // Handle "wenpm update self"
+    // Handle "wenget update self"
     if names.len() == 1 && names[0] == "self" {
         return upgrade_self();
     }
 
     let config = Config::new()?;
-
-    // Load manifests from cache (includes local + bucket sources)
-    let sources = config.get_packages_from_cache()?;
     let installed = config.get_or_create_installed()?;
 
     if installed.packages.is_empty() {
@@ -30,7 +28,7 @@ pub fn run(names: Vec<String>, yes: bool) -> Result<()> {
     // Determine which packages to upgrade
     let to_upgrade: Vec<String> = if names.is_empty() || (names.len() == 1 && names[0] == "all") {
         // List upgradeable packages
-        let upgradeable = find_upgradeable(&sources, &installed, &github)?;
+        let upgradeable = find_upgradeable(&config, &installed, &github)?;
 
         if upgradeable.is_empty() {
             println!("{}", "All packages are up to date".green());
@@ -52,21 +50,49 @@ pub fn run(names: Vec<String>, yes: bool) -> Result<()> {
     add::run(to_upgrade, yes)
 }
 
-/// Find upgradeable packages
+/// Find upgradeable packages by checking their sources
 fn find_upgradeable(
-    sources: &crate::core::SourceManifest,
+    config: &Config,
     installed: &crate::core::InstalledManifest,
     github: &GitHubProvider,
 ) -> Result<Vec<(String, String, String)>> {
     let mut upgradeable = Vec::new();
 
     for (name, inst_pkg) in &installed.packages {
-        if let Some(src_pkg) = sources.find_package(name) {
-            // Fetch latest version from GitHub
-            if let Ok(latest_version) = github.fetch_latest_version(&src_pkg.repo) {
-                if inst_pkg.version != latest_version {
-                    upgradeable.push((name.clone(), inst_pkg.version.clone(), latest_version));
+        // Determine repo URL based on source
+        let repo_url = match &inst_pkg.source {
+            PackageSource::Bucket { name: bucket_name } => {
+                // Get package info from cache for bucket packages
+                let cache = config.get_or_rebuild_cache()?;
+
+                // Find package in cache by name (cache is keyed by URL, not name)
+                let found = cache
+                    .packages
+                    .values()
+                    .find(|cached_pkg| cached_pkg.package.name == *name);
+
+                if let Some(cached_pkg) = found {
+                    cached_pkg.package.repo.clone()
+                } else {
+                    eprintln!(
+                        "{} Package {} not found in bucket {} cache, skipping update check",
+                        "Warning:".yellow(),
+                        name,
+                        bucket_name
+                    );
+                    continue;
                 }
+            }
+            PackageSource::DirectRepo { url } => {
+                // Use the stored repo URL directly
+                url.clone()
+            }
+        };
+
+        // Fetch latest version from GitHub
+        if let Ok(latest_version) = github.fetch_latest_version(&repo_url) {
+            if inst_pkg.version != latest_version {
+                upgradeable.push((name.clone(), inst_pkg.version.clone(), latest_version));
             }
         }
     }
@@ -74,9 +100,9 @@ fn find_upgradeable(
     Ok(upgradeable)
 }
 
-/// Upgrade wenpm itself
+/// Upgrade wenget itself
 fn upgrade_self() -> Result<()> {
-    println!("{}", "Upgrading wenpm...".cyan());
+    println!("{}", "Upgrading wenget...".cyan());
 
     // Get current version
     let current_version = env!("CARGO_PKG_VERSION");
@@ -84,7 +110,7 @@ fn upgrade_self() -> Result<()> {
 
     // Fetch latest release from GitHub
     let provider = GitHubProvider::new()?;
-    let latest_version = provider.fetch_latest_version("https://github.com/superyngo/WenPM")?;
+    let latest_version = provider.fetch_latest_version("https://github.com/superyngo/wenget")?;
 
     println!("Latest version: {}", latest_version);
 
@@ -101,7 +127,7 @@ fn upgrade_self() -> Result<()> {
     println!("For now, please manually download and install the latest version from:");
     println!(
         "  {}",
-        "https://github.com/superyngo/WenPM/releases/latest".cyan()
+        "https://github.com/superyngo/wenget/releases/latest".cyan()
     );
 
     Ok(())

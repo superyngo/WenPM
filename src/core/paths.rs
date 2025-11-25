@@ -2,8 +2,9 @@
 //!
 //! This module provides utilities for managing all Wenget-related paths:
 //! - Root directory: ~/.wenget/
-//! - Sources manifest: ~/.wenget/sources.json
 //! - Installed manifest: ~/.wenget/installed.json
+//! - Buckets config: ~/.wenget/buckets.json
+//! - Manifest cache: ~/.wenget/manifest-cache.json
 //! - Apps directory: ~/.wenget/apps/
 //! - Bin directory: ~/.wenget/bin/
 //! - Cache directory: ~/.wenget/cache/
@@ -32,11 +33,6 @@ impl WenPaths {
     /// Get the root directory (~/.wenget/)
     pub fn root(&self) -> &Path {
         &self.root
-    }
-
-    /// Get the sources manifest path (~/.wenget/sources.json)
-    pub fn sources_json(&self) -> PathBuf {
-        self.root.join("sources.json")
     }
 
     /// Get the installed manifest path (~/.wenget/installed.json)
@@ -158,8 +154,9 @@ mod tests {
     fn test_paths_creation() {
         let paths = WenPaths::new().unwrap();
         assert!(paths.root().ends_with(".wenget"));
-        assert!(paths.sources_json().ends_with("sources.json"));
         assert!(paths.installed_json().ends_with("installed.json"));
+        assert!(paths.buckets_json().ends_with("buckets.json"));
+        assert!(paths.manifest_cache_json().ends_with("manifest-cache.json"));
     }
 
     #[test]

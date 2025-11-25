@@ -32,7 +32,7 @@ pub fn run(names: Vec<String>, yes: bool, force: bool) -> Result<()> {
 
     if names.is_empty() {
         println!("{}", "No package names provided".yellow());
-        println!("Usage: wenget delete <name>...");
+        println!("Usage: wenget del <name>...");
         return Ok(());
     }
 

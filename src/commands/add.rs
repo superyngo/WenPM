@@ -1,19 +1,20 @@
 //! Add (Install) command implementation
 
+use crate::core::manifest::PackageSource;
 use crate::core::{Config, InstalledPackage, Platform, WenPaths};
 use crate::downloader;
 use crate::installer::{create_shim, extract_archive, find_executable};
-use crate::providers::{GitHubProvider, SourceProvider};
+use crate::package_resolver::{PackageInput, PackageResolver, ResolvedPackage};
+use crate::providers::GitHubProvider;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use colored::Colorize;
-use glob::Pattern;
 use std::fs;
 
 #[cfg(unix)]
 use crate::installer::create_symlink;
 
-/// Install packages
+/// Install packages (smart detection: package names from cache or GitHub URLs)
 pub fn run(names: Vec<String>, yes: bool) -> Result<()> {
     let config = Config::new()?;
     let paths = WenPaths::new()?;
@@ -23,13 +24,16 @@ pub fn run(names: Vec<String>, yes: bool) -> Result<()> {
         config.init()?;
     }
 
-    // Load manifests from cache (includes local + bucket sources)
-    let mut sources = config.get_packages_from_cache()?;
     let mut installed = config.get_or_create_installed()?;
 
     if names.is_empty() {
-        println!("{}", "No package names provided".yellow());
-        println!("Usage: wenpm add <name>...");
+        println!("{}", "No package names or URLs provided".yellow());
+        println!("Usage: wenget add <name|url>...");
+        println!();
+        println!("Examples:");
+        println!("  wenget add ripgrep              # Install from cache");
+        println!("  wenget add 'rip*'               # Install matching packages (glob)");
+        println!("  wenget add https://github.com/BurntSushi/ripgrep  # Install from URL");
         return Ok(());
     }
 
@@ -37,57 +41,102 @@ pub fn run(names: Vec<String>, yes: bool) -> Result<()> {
     let platform = Platform::current();
     let platform_ids = platform.possible_identifiers();
 
-    // Compile glob patterns
-    let glob_patterns: Vec<Pattern> = names
-        .iter()
-        .map(|p| Pattern::new(p))
-        .collect::<Result<_, _>>()?;
+    // Resolve all inputs and collect packages to install
+    let resolver = PackageResolver::new(Config::new()?)?;
+    let mut packages_to_install: Vec<ResolvedPackage> = Vec::new();
 
-    // Find matching packages and collect their info (not references)
-    let matching_package_info: Vec<(String, String)> = sources
-        .packages
-        .iter()
-        .filter(|pkg| {
-            // Check if name matches
-            let name_matches = glob_patterns
-                .iter()
-                .any(|pattern| pattern.matches(&pkg.name));
+    for name in &names {
+        let input = PackageInput::parse(name);
 
-            // Check if platform is supported
-            let platform_matches = platform_ids.iter().any(|id| pkg.platforms.contains_key(id));
+        match resolver.resolve(&input) {
+            Ok(resolved) => {
+                for pkg_resolved in resolved {
+                    // Check platform support
+                    let platform_matches = platform_ids
+                        .iter()
+                        .any(|id| pkg_resolved.package.platforms.contains_key(id));
 
-            name_matches && platform_matches
-        })
-        .map(|pkg| (pkg.name.clone(), pkg.repo.clone()))
-        .collect();
+                    if !platform_matches {
+                        println!(
+                            "{} {} does not support current platform",
+                            "Warning:".yellow(),
+                            pkg_resolved.package.name
+                        );
+                        continue;
+                    }
 
-    if matching_package_info.is_empty() {
-        println!(
-            "{}",
-            format!("No matching packages found for: {:?}", names).yellow()
-        );
+                    packages_to_install.push(pkg_resolved);
+                }
+            }
+            Err(e) => {
+                eprintln!("{} {}: {}", "Error".red().bold(), name, e);
+            }
+        }
+    }
+
+    if packages_to_install.is_empty() {
+        println!("{}", "No packages to install".yellow());
         return Ok(());
     }
 
     // Create GitHub provider to fetch versions
     let github = GitHubProvider::new()?;
 
-    // Show packages to install with versions
+    // Show packages to install with versions and handle already-installed packages
     println!("{}", "Packages to install:".bold());
-    for (name, repo) in &matching_package_info {
-        let already_installed = installed.is_installed(name);
-        let status = if already_installed {
-            "(reinstall)".to_string().yellow()
-        } else {
-            "(new)".to_string().green()
-        };
+
+    let mut to_install: Vec<ResolvedPackage> = Vec::new();
+    let mut to_update: Vec<ResolvedPackage> = Vec::new();
+
+    for resolved in packages_to_install {
+        let pkg_name = &resolved.package.name;
+        let repo = &resolved.package.repo;
 
         // Fetch latest version
         let version = github
             .fetch_latest_version(repo)
             .unwrap_or_else(|_| "unknown".to_string());
 
-        println!("  • {} v{} {}", name, version, status);
+        if installed.is_installed(pkg_name) {
+            // Package already installed
+            let inst_pkg = installed.get_package(pkg_name).unwrap();
+            if inst_pkg.version == version {
+                println!(
+                    "  {} {} v{} {}",
+                    "•".cyan(),
+                    pkg_name,
+                    version,
+                    "(already installed, same version)".dimmed()
+                );
+            } else {
+                println!(
+                    "  {} {} v{} {} → {}",
+                    "•".yellow(),
+                    pkg_name,
+                    inst_pkg.version.dimmed(),
+                    "upgrade to".yellow(),
+                    version.green()
+                );
+                to_update.push(resolved);
+            }
+        } else {
+            // New installation
+            println!(
+                "  {} {} v{} {}",
+                "•".green(),
+                pkg_name,
+                version,
+                "(new)".green()
+            );
+            to_install.push(resolved);
+        }
+    }
+
+    // Check if there's anything to do
+    if to_install.is_empty() && to_update.is_empty() {
+        println!();
+        println!("{}", "All packages are already up to date".green());
+        return Ok(());
     }
 
     // Confirm installation
@@ -108,76 +157,39 @@ pub fn run(names: Vec<String>, yes: bool) -> Result<()> {
 
     println!();
 
-    // Install each package
+    // Install/update packages
     let mut success_count = 0;
     let mut fail_count = 0;
 
-    for (pkg_name, repo_url) in matching_package_info {
-        // Update package manifest to ensure we have the latest version info
-        println!("{} {} manifest...", "Updating".cyan(), pkg_name);
+    // Combine new installs and updates
+    let all_packages: Vec<_> = to_install.into_iter().chain(to_update).collect();
 
-        match github.fetch_package(&repo_url) {
-            Ok(updated_pkg) => {
-                // Update the package in sources
-                if let Some(existing) = sources.packages.iter_mut().find(|p| p.name == pkg_name) {
-                    *existing = updated_pkg.clone();
+    for resolved in all_packages {
+        let pkg = &resolved.package;
+        let pkg_name = &pkg.name;
+        let repo_url = &pkg.repo;
 
-                    // Save updated sources
-                    if let Err(e) = config.save_sources(&sources) {
-                        println!("  {} Failed to save updated manifest: {}", "⚠".yellow(), e);
-                    } else {
-                        println!("  {} Manifest updated", "✓".green());
-                    }
-                }
+        let version = github.fetch_latest_version(repo_url)?;
+        println!("{} {} v{}...", "Installing".cyan(), pkg_name, version);
 
-                // Fetch latest version for this package
-                let version = github.fetch_latest_version(&repo_url)?;
+        match install_package(
+            &config,
+            &paths,
+            pkg,
+            &platform_ids,
+            &version,
+            &resolved.source,
+        ) {
+            Ok(inst_pkg) => {
+                installed.upsert_package(pkg_name.clone(), inst_pkg);
+                config.save_installed(&installed)?;
 
-                println!("{} {} v{}...", "Installing".cyan(), pkg_name, version);
-
-                // Use the updated package info for installation
-                match install_package(&config, &paths, &updated_pkg, &platform_ids, &version) {
-                    Ok(inst_pkg) => {
-                        installed.upsert_package(pkg_name.clone(), inst_pkg);
-                        config.save_installed(&installed)?;
-
-                        println!("  {} Installed successfully", "✓".green());
-                        success_count += 1;
-                    }
-                    Err(e) => {
-                        println!("  {} {}", "✗".red(), e);
-                        fail_count += 1;
-                    }
-                }
+                println!("  {} Installed successfully", "✓".green());
+                success_count += 1;
             }
             Err(e) => {
-                println!("  {} Failed to update manifest: {}", "⚠".yellow(), e);
-                println!("  Using cached manifest data...");
-
-                // Fall back to using the existing package info
-                // Find the package from sources
-                if let Some(pkg) = sources.packages.iter().find(|p| p.name == pkg_name) {
-                    let version = github.fetch_latest_version(&repo_url)?;
-
-                    println!("{} {} v{}...", "Installing".cyan(), pkg_name, version);
-
-                    match install_package(&config, &paths, pkg, &platform_ids, &version) {
-                        Ok(inst_pkg) => {
-                            installed.upsert_package(pkg_name.clone(), inst_pkg);
-                            config.save_installed(&installed)?;
-
-                            println!("  {} Installed successfully", "✓".green());
-                            success_count += 1;
-                        }
-                        Err(e) => {
-                            println!("  {} {}", "✗".red(), e);
-                            fail_count += 1;
-                        }
-                    }
-                } else {
-                    println!("  {} Package not found in sources", "✗".red());
-                    fail_count += 1;
-                }
+                println!("  {} {}", "✗".red(), e);
+                fail_count += 1;
             }
         }
         println!();
@@ -202,6 +214,7 @@ fn install_package(
     pkg: &crate::core::Package,
     platform_ids: &[String],
     version: &str,
+    source: &PackageSource,
 ) -> Result<InstalledPackage> {
     // Find platform binary
     let (platform_id, binary) = platform_ids
@@ -275,6 +288,8 @@ fn install_package(
         installed_at: Utc::now(),
         install_path: app_dir.to_string_lossy().to_string(),
         files: extracted_files,
+        source: source.clone(),
+        description: pkg.description.clone(),
     };
 
     Ok(inst_pkg)
