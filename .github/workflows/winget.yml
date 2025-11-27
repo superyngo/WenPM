@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: vedantmgoyal9/winget-releaser@main
         with:
-          identifier: WenAnLin.wenget
+          identifier: WenAnLin.Wenget
           token: ${{ secrets.WINGET_TOKEN }}
           installers-regex: '\.exe$'
           max-versions-to-keep: 5
