@@ -2,8 +2,13 @@ name: Publish to WinGet
 
 on:
   workflow_dispatch:
-  # release:
-  #   types: [released]
+    inputs:
+      tag_name:
+        description: 'Tag name for the release'
+        required: true
+        type: string
+  release:
+    types: [released]
 
 jobs:
   winget:
@@ -15,3 +20,4 @@ jobs:
           token: ${{ secrets.WINGET_TOKEN }}
           installers-regex: '\.exe$'
           max-versions-to-keep: 5
+          release-tag: ${{ github.event.inputs.tag_name || github.event.release.tag_name }}
