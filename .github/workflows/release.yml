@@ -179,7 +179,7 @@ jobs:
         run: arm-linux-gnueabihf-strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
       - name: Strip binary (ARM64)
-        if: matrix.target == 'aarch64-unknown-linux-gnu' || matrix.target == 'aarch64-unknown-linux-musl'
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: aarch64-linux-gnu-strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
       - name: Strip binary (cross-compiled musl)
