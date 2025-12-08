@@ -1,0 +1,882 @@
+
+ ▐▛███▜▌   Claude Code v2.0.59
+▝▜█████▛▘  Opus 4.5 · Claude Pro
+  ▘▘ ▝▝    D:\Users\user\Documents\rust\wenget
+
+> /clear 
+  ⎿  (no content)
+
+> /plugin 
+  ⎿  (no content)
+
+> /plan 
+  ⎿  No plan found for current session
+
+> 功能改善：linux平台下專案名稱和執行檔名稱不同時安裝失敗
+u0_a286@localhost:~$ wenget install ripgrep
+Packages to install:
+  • ripgrep vunknown (new)
+
+Proceed with installation? [Y/n] y
+
+[2025-12-08T03:20:43Z INFO  wenget::providers::github] Fetching package 
+from: https://github.com/BurntSushi/ripgrep
+[2025-12-08T03:20:46Z INFO  wenget::providers::github] ✓ Found ripgrep 
+v15.1.0 with 9 platform(s)
+Installing ripgrep v15.1.0...
+  Downloading from https://github.com/BurntSushi/ripgrep/releases/download/1
+5.1.0/ripgrep-15.1.0-aarch64-unknown-linux-gnu.tar.gz...
+[2025-12-08T03:20:46Z INFO  wenget::downloader] Downloading: 
+https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.
+0-aarch64-unknown-linux-gnu.tar.gz
+  [########################################] 1.78 MiB/1.78 MiB (0s)         
+                                                                           
+[2025-12-08T03:20:49Z INFO  wenget::downloader] Downloaded 1869959 bytes
+  Extracting to /data/data/com.termux/files/home/.wenget/apps/ripgrep...
+[2025-12-08T03:20:49Z INFO  wenget::installer::extractor] Extracting: 
+/data/data/com.termux/files/home/.wenget/cache/downloads/ripgrep-15.1.0-aarc
+h64-unknown-linux-gnu.tar.gz
+[2025-12-08T03:20:49Z INFO  wenget::installer::extractor] Extracted 13 
+file(s)
+  ✗ Failed to find executable in archive. Extracted files:
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/doc/CHANGELOG.md
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/doc/FAQ.md
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/doc/GUIDE.md
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/doc/rg.1
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/UNLICENSE
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/README.md
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/LICENSE-MIT
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/COPYING
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/complete/_rg.ps1
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/complete/_rg
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/complete/rg.fish
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/complete/rg.bash
+ripgrep-15.1.0-aarch64-unknown-linux-gnu/rg
+
+Summary:
+  ✗ 1 package(s) failed
+
+初步發想：
+1.先篩選出可能的執行檔(無副檔名,*.sh)
+2.排除掉特定說明檔(*COPYING*,*LICENSE*,*README*,*CHANGELOG*....)
+3.當最後檔案數量大於1時讓用戶選擇(最好可以可用方向鍵操作，其次使用數字輸入選
+項) 請先評估 
+
+● 我來評估這個問題。首先讓我查看現有的可執行文件檢測邏輯。
+
+● Search(pattern: "find.*executable|executable.*find", path: "src")
+  ⎿  Found 4 files (ctrl+o to expand)
+
+● Search(pattern: "Failed to find executable", path: "src")
+  ⎿  Found 1 file (ctrl+o to expand)
+
+● Read(src\installer\extractor.rs)
+  ⎿  Read 457 lines
+
+● Read(src\installer\mod.rs)
+  ⎿  Read 20 lines
+
+● 現在讓我看看 add.rs 中如何使用這個函數：
+
+● Search(pattern: "find_executable|executable.*candidate", path:
+        "src\commands\add.rs", output_mode: "content")
+  ⎿  Found 4 lines (ctrl+o to expand)
+
+● Read(src\commands\add.rs)
+  ⎿  Read 150 lines
+
+● 現在我理解了問題。讓我分析根本原因並評估您的方案。
+
+  問題分析
+
+  根據錯誤輸出，解壓的文件包括：
+  ripgrep-15.1.0-aarch64-unknown-linux-gnu/rg  ← 這是可執行文件
+
+  問題出在 find_executable_candidates 函數
+  (src/installer/extractor.rs:254-259)：
+
+  let is_executable = if cfg!(windows) {
+      file.ends_with(".exe")
+  } else {
+      // On Unix, check if it's in bin/ or has no extension (common for 
+  binaries)
+      file.contains("bin/") || !file.contains('.')
+  };
+
+  Bug: 判斷條件是 !file.contains('.')，但檢查的是整個路徑而非文件名。
+  - 路徑 ripgrep-15.1.0-aarch64-unknown-linux-gnu/rg 包含 .（在版本號中）
+  - 因此 !file.contains('.') 為 false，且不在 bin/ 目錄
+  - 結果 rg 被錯誤地認為不是可執行文件
+
+  方案評估
+
+  您的方案方向正確，我來詳細評估並補充：
+
+  1. 篩選可能的執行檔 ✅
+
+  建議改進：
+  - 檢查文件名而非整個路徑的副檔名（修正核心 bug）
+  - 保留無副檔名的文件
+  - 保留 .sh, .bash, .py 等腳本（如果是主程式）
+  - 利用 tar 中的可執行權限位 (mode & 0o111)
+
+  2. 排除特定檔案 ✅
+
+  建議排除清單：
+  | 類型   | 模式                                              |
+  |------|-------------------------------------------------|
+  | 文檔   | *.md, *.txt, *.rst, *.html, *.1 (man pages)     |
+  | 授權   | *LICENSE*, *COPYING*, *UNLICENSE*, *NOTICE*     |
+  | 設定   | *.yml, *.yaml, *.toml, *.json, *.xml            |
+  | 補全腳本 | complete/*, completions/*, *.fish, *.bash (目錄內) |
+  | 其他   | *.ps1 (PowerShell補全), README*, CHANGELOG*       |
+
+  3. 用戶選擇機制 ⚠️ 需要評估
+
+  現有代碼已有基本選擇功能（add.rs:698-731），但使用數字輸入。
+
+  方向鍵選擇的考量：
+  - 優點: 更友好的 UX
+  - 缺點: 需要額外依賴（如 dialoguer 或 inquire crate）
+  - 建議: 優先修正核心 bug，UX 改進可作為後續優化
+
+  建議實作順序
+
+  1. 修正核心 bug（高優先）: 改用文件名而非路徑檢查副檔名
+  2. 增強排除邏輯: 加入文檔/授權文件排除
+  3. 利用權限位: Unix 下檢查 tar 中的可執行權限
+  4. 改進選擇 UI（可選）: 考慮 dialoguer crate 的方向鍵選擇
+
+  要我開始實作這些改進嗎？
+
+> 依順序實作1~3，先不改進選擇UI 
+
+● BashOutput(Reading shell output)
+  ⎿      Updating crates.io index                           
+          Locking 264 packages to latest compatible versions
+           Adding colored v2.2.0 (available: v3.0.0)
+     … +117 lines (ctrl+o to expand)
+
+● 構建成功。現在開始實作修改。
+
+  首先修正核心 bug - 改用文件名而非路徑檢查副檔名：
+
+● Update(src\installer\extractor.rs)
+  ⎿  Updated src\installer\extractor.rs with 80 additions and 7 removals 
+       240        pub reason: String,
+       241    }
+       242    
+       243 +  /// Check if a filename should be excluded as a 
+           + non-executable documentation/config file
+       244 +  fn is_excluded_file(filename: &str, file_path: &str) -> 
+           + bool {
+       245 +      let lower_name = filename.to_lowercase();
+       246 +      let lower_path = file_path.to_lowercase();
+       247 +  
+       248 +      // Exclude documentation files by extension
+       249 +      let doc_extensions = [
+       250 +          ".md", ".txt", ".rst", ".html", ".htm", ".pdf", 
+           + ".doc", ".docx",
+       251 +          ".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", // 
+           + man pages
+       252 +      ];
+       253 +      if doc_extensions.iter().any(|ext| 
+           + lower_name.ends_with(ext)) {
+       254 +          return true;
+       255 +      }
+       256 +  
+       257 +      // Exclude license/readme files by name pattern
+       258 +      let excluded_names = [
+       259 +          "license", "licence", "copying", "unlicense", 
+           + "notice",
+       260 +          "readme", "changelog", "changes", "history", 
+           + "authors",
+       261 +          "contributors", "credits", "thanks", "todo", 
+           + "news",
+       262 +      ];
+       263 +      if excluded_names.iter().any(|name| 
+           + lower_name.contains(name)) {
+       264 +          return true;
+       265 +      }
+       266 +  
+       267 +      // Exclude config/data files by extension
+       268 +      let config_extensions = [
+       269 +          ".yml", ".yaml", ".toml", ".json", ".xml", ".ini", 
+           + ".cfg", ".conf",
+       270 +      ];
+       271 +      if config_extensions.iter().any(|ext| 
+           + lower_name.ends_with(ext)) {
+       272 +          return true;
+       273 +      }
+       274 +  
+       275 +      // Exclude shell completion files (usually in complete/
+           +  or completions/ directory)
+       276 +      let completion_extensions = [".fish", ".bash", ".zsh", 
+           + ".ps1"];
+       277 +      let in_completion_dir = lower_path.contains("complete")
+           +  || lower_path.contains("completion");
+       278 +      if in_completion_dir && 
+           + completion_extensions.iter().any(|ext| 
+           + lower_name.ends_with(ext)) {
+       279 +          return true;
+       280 +      }
+       281 +  
+       282 +      // Exclude files starting with underscore in completion
+           +  directories (e.g., _rg for zsh)
+       283 +      if in_completion_dir && lower_name.starts_with('_') {
+       284 +          return true;
+       285 +      }
+       286 +  
+       287 +      false
+       288 +  }
+       289 +  
+       290 +  /// Check if a file could be an executable based on its 
+           + filename
+       291 +  fn could_be_executable(filename: &str, file_path: &str) -> 
+           + bool {
+       292 +      let lower_name = filename.to_lowercase();
+       293 +  
+       294 +      if cfg!(windows) {
+       295 +          // On Windows, must have .exe extension
+       296 +          lower_name.ends_with(".exe")
+       297 +      } else {
+       298 +          // On Unix: check if in bin/ directory OR has no 
+           + extension in filename
+       299 +          let in_bin_dir = file_path.contains("bin/");
+       300 +  
+       301 +          // Check if filename has an extension (only check 
+           + the filename, not the path!)
+       302 +          let has_extension = filename.contains('.') && 
+           + !filename.starts_with('.');
+       303 +  
+       304 +          // Executable scripts
+       305 +          let script_extensions = [".sh"];
+       306 +          let is_script = script_extensions.iter().any(|ext| 
+           + lower_name.ends_with(ext));
+       307 +  
+       308 +          in_bin_dir || !has_extension || is_script
+       309 +      }
+       310 +  }
+       311 +  
+       312    /// Find all possible executables and rank them by priority
+       313    pub fn find_executable_candidates(
+       314        extracted_files: &[String],
+     ...
+       250        for file in extracted_files {
+       251            let path = Path::new(file);
+       252    
+       253 -          // Only consider executable files
+       254 -          let is_executable = if cfg!(windows) {
+       255 -              file.ends_with(".exe")
+       256 -          } else {
+       257 -              // On Unix, check if it's in bin/ or has no 
+           - extension (common for binaries)
+       258 -              file.contains("bin/") || !file.contains('.')
+       253 +          // Get just the filename (not the full path)
+       254 +          let filename = match path.file_name().and_then(|s| 
+           + s.to_str()) {
+       255 +              Some(name) => name,
+       256 +              None => continue,
+       257            };
+       258    
+       259 -          if !is_executable {
+       259 +          // Skip excluded files (docs, licenses, configs, 
+           + etc.)
+       260 +          if is_excluded_file(filename, file) {
+       261                continue;
+       262            }
+       263    
+       264 +          // Check if this could be an executable
+       265 +          if !could_be_executable(filename, file) {
+       266 +              continue;
+       267 +          }
+       268 +  
+       269            // Skip test/debug/benchmark executables
+       270            let lower_file = file.to_lowercase();
+       271            if lower_file.contains("test")
+
+● 現在更新 todo 狀態並實作第三項 - 利用權限位檢查：
+
+● 為了利用權限位，需要修改函數簽名來接收解壓目錄路徑。先更新函數簽名和實作：
+
+● Read(src\installer\extractor.rs)
+  ⎿  Read 120 lines
+
+● Update(src\installer\extractor.rs)
+  ⎿  Updated src\installer\extractor.rs with 94 additions and 56 removals
+       309        }
+       310    }
+       311    
+       312 +  /// Check if a file has executable permission on Unix
+       313 +  #[cfg(unix)]
+       314 +  fn has_executable_permission(file_path: &Path) -> bool {
+       315 +      use std::os::unix::fs::PermissionsExt;
+       316 +      if let Ok(metadata) = fs::metadata(file_path) {
+       317 +          let mode = metadata.permissions().mode();
+       318 +          mode & 0o111 != 0
+       319 +      } else {
+       320 +          false
+       321 +      }
+       322 +  }
+       323 +  
+       324 +  #[cfg(not(unix))]
+       325 +  fn has_executable_permission(_file_path: &Path) -> bool {
+       326 +      // On Windows, we rely on .exe extension, not 
+           + permissions
+       327 +      true
+       328 +  }
+       329 +  
+       330    /// Find all possible executables and rank them by priority
+       331 +  /// `extract_dir` is the directory where files were 
+           + extracted to (used for permission checks)
+       332    pub fn find_executable_candidates(
+       333        extracted_files: &[String],
+       334        package_name: &str,
+       335 +      extract_dir: Option<&Path>,
+       336    ) -> Vec<ExecutableCandidate> {
+       337        let mut candidates = Vec::new();
+       338    
+     ...
+       345                continue;
+       346            }
+       347    
+       348 -          if let Some(filename) = 
+           - path.file_name().and_then(|s| s.to_str()) {
+       349 -              let name_without_ext = 
+           - filename.trim_end_matches(".exe");
+       350 -              let mut score = 0u32;
+       351 -              let mut reasons = Vec::new();
+       348 +          // Check actual file permissions if extract_dir is 
+           + provided
+       349 +          let has_exec_perm = if let Some(dir) = extract_dir 
+           + {
+       350 +              let full_path = dir.join(file);
+       351 +              has_executable_permission(&full_path)
+       352 +          } else {
+       353 +              false
+       354 +          };
+       355    
+       356 -              // Rule 1: Exact match with package name 
+           - (highest priority)
+       357 -              if name_without_ext == package_name {
+       358 -                  score += 100;
+       359 -                  reasons.push("exact name match");
+       360 -              }
+       361 -              // Rule 2: Partial match or package name 
+           - contains file name
+       362 -              else if name_without_ext.contains(package_name)
+       363 -                  || package_name.contains(name_without_ext)
+       364 -              {
+       365 -                  score += 50;
+       366 -                  reasons.push("partial name match");
+       367 -              }
+       368 -              // Rule 3: Common abbreviation patterns (e.g., 
+           - ripgrep -> rg)
+       369 -              else if is_likely_abbreviation(package_name, 
+           - name_without_ext) {
+       370 -                  score += 40;
+       371 -                  reasons.push("likely abbreviation");
+       372 -              }
+       356 +          let name_without_ext = 
+           + filename.trim_end_matches(".exe");
+       357 +          let mut score = 0u32;
+       358 +          let mut reasons = Vec::new();
+       359    
+       360 -              // Rule 4: Located in bin/ directory
+       361 -              if file.contains("bin/") {
+       362 -                  score += 30;
+       363 -                  reasons.push("in bin/ directory");
+       364 -              }
+       360 +          // Rule 0: Has executable permission (Unix) - 
+           + strong signal
+       361 +          #[cfg(unix)]
+       362 +          if has_exec_perm {
+       363 +              score += 35;
+       364 +              reasons.push("has exec permission");
+       365 +          }
+       366    
+       367 -              // Rule 5: Located in target/release/ (Rust 
+           - projects)
+       368 -              if file.contains("target/release/") {
+       369 -                  score += 25;
+       370 -                  reasons.push("in target/release/");
+       371 -              }
+       367 +          // Rule 1: Exact match with package name (highest 
+           + priority)
+       368 +          if name_without_ext == package_name {
+       369 +              score += 100;
+       370 +              reasons.push("exact name match");
+       371 +          }
+       372 +          // Rule 2: Partial match or package name contains 
+           + file name
+       373 +          else if name_without_ext.contains(package_name)
+       374 +              || package_name.contains(name_without_ext)
+       375 +          {
+       376 +              score += 50;
+       377 +              reasons.push("partial name match");
+       378 +          }
+       379 +          // Rule 3: Common abbreviation patterns (e.g., 
+           + ripgrep -> rg)
+       380 +          else if is_likely_abbreviation(package_name, 
+           + name_without_ext) {
+       381 +              score += 40;
+       382 +              reasons.push("likely abbreviation");
+       383 +          }
+       384    
+       385 -              // Rule 6: Shallow directory depth (prefer 
+           - files closer to root)
+       386 -              let depth = file.matches('/').count() + 
+           - file.matches('\\').count();
+       387 -              if depth <= 1 {
+       388 -                  score += 20;
+       389 -              } else if depth <= 2 {
+       390 -                  score += 10;
+       391 -              }
+       385 +          // Rule 4: Located in bin/ directory
+       386 +          if file.contains("bin/") {
+       387 +              score += 30;
+       388 +              reasons.push("in bin/ directory");
+       389 +          }
+       390    
+       391 -              // Rule 7: Simple filename (fewer special 
+           - characters)
+       392 -              if !name_without_ext.contains('-') && 
+           - !name_without_ext.contains('_') {
+       393 -                  score += 5;
+       394 -                  reasons.push("simple name");
+       395 -              }
+       391 +          // Rule 5: Located in target/release/ (Rust 
+           + projects)
+       392 +          if file.contains("target/release/") {
+       393 +              score += 25;
+       394 +              reasons.push("in target/release/");
+       395 +          }
+       396    
+       397 -              // Only add if score is above threshold
+       398 -              if score > 0 {
+       399 -                  let reason = if reasons.is_empty() {
+       400 -                      "potential executable".to_string()
+       401 -                  } else {
+       402 -                      reasons.join(", ")
+       403 -                  };
+       397 +          // Rule 6: Shallow directory depth (prefer files 
+           + closer to root)
+       398 +          let depth = file.matches('/').count() + 
+           + file.matches('\\').count();
+       399 +          if depth <= 1 {
+       400 +              score += 20;
+       401 +          } else if depth <= 2 {
+       402 +              score += 10;
+       403 +          }
+       404    
+       405 -                  candidates.push(ExecutableCandidate {
+       406 -                      path: file.clone(),
+       407 -                      score,
+       408 -                      reason,
+       409 -                  });
+       410 -              }
+       405 +          // Rule 7: Simple filename (fewer special 
+           + characters)
+       406 +          if !name_without_ext.contains('-') && 
+           + !name_without_ext.contains('_') {
+       407 +              score += 5;
+       408 +              reasons.push("simple name");
+       409            }
+       410 +  
+       411 +          // Only add if score is above threshold (or has 
+           + exec permission on Unix)
+       412 +          #[cfg(unix)]
+       413 +          let should_add = score > 0 || has_exec_perm;
+       414 +          #[cfg(not(unix))]
+       415 +          let should_add = score > 0;
+       416 +  
+       417 +          if should_add {
+       418 +              let reason = if reasons.is_empty() {
+       419 +                  "potential executable".to_string()
+       420 +              } else {
+       421 +                  reasons.join(", ")
+       422 +              };
+       423 +  
+       424 +              candidates.push(ExecutableCandidate {
+       425 +                  path: file.clone(),
+       426 +                  score,
+       427 +                  reason,
+       428 +              });
+       429 +          }
+       430        }
+       431    
+       432        // Sort by score (highest first)
+
+● 現在更新 find_executable 函數和測試：
+
+● Read(src\installer\extractor.rs)
+  ⎿  Read 100 lines
+
+● Update(src\installer\extractor.rs)
+  ⎿  Updated src\installer\extractor.rs with 1 addition and 1 removal   
+       479    /// Find the main executable in extracted files
+       480    /// Returns the best candidate if found
+       481    pub fn find_executable(extracted_files: &[String], 
+             package_name: &str) -> Option<String> {
+       482 -      let candidates = 
+           -  find_executable_candidates(extracted_files, package_name);
+       482 +      let candidates = 
+           +  find_executable_candidates(extracted_files, package_name
+           +  , None);
+       483        candidates.first().map(|c| c.path.clone())
+       484    }
+       485    
+
+● 現在更新調用處。先找到所有調用點：
+
+● Search(pattern: "find_executable_candidates", path: "src", output_mode:
+        "content")
+  ⎿  Found 5 lines (ctrl+o to expand)
+
+● Read(src\commands\add.rs)
+  ⎿  Read 30 lines
+
+● Update(src\commands\add.rs)
+  ⎿  Updated src\commands\add.rs with 2 additions and 2 removals        
+       674    
+       675        let extracted_files = extract_archive(&download_path, 
+             &app_dir)?;
+       676    
+       677 -      // Find executable candidates
+       678 -      let candidates = 
+           -  find_executable_candidates(&extracted_files, &pkg.name);
+       677 +      // Find executable candidates
+           +   (pass app_dir for Unix permission checks)
+       678 +      let candidates = 
+           +  find_executable_candidates(&extracted_files, &pkg.name
+           +  , Some(&app_dir));
+       679    
+       680        if candidates.is_empty() {
+       681            anyhow::bail!(
+
+● 檢查 update.rs：
+
+● Search(pattern: "find_executable", path: "src\commands\update.rs",
+        output_mode: "content")
+  ⎿  Found 2 lines (ctrl+o to expand)
+
+● update.rs 使用的是 find_executable（已更新為向後兼容）。現在更新測試：
+
+● Read(src\installer\extractor.rs)
+  ⎿  Read 45 lines
+
+● Update(src\installer\extractor.rs)
+  ⎿  Updated src\installer\extractor.rs with 81 additions                
+       538        }
+       539    
+       540        #[test]
+       541 +      fn test_find_executable_ripgrep_linux() {
+       542 +          // This is the actual file list from ripgrep Linux 
+           + release
+       543 +          let files = vec![
+       544 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/doc/C
+           + HANGELOG.md".to_string(),
+       545 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/doc/F
+           + AQ.md".to_string(),
+       546 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/doc/G
+           + UIDE.md".to_string(),
+       547 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/doc/r
+           + g.1".to_string(),
+       548 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/UNLIC
+           + ENSE".to_string(),
+       549 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/READM
+           + E.md".to_string(),
+       550 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/LICEN
+           + SE-MIT".to_string(),
+       551 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/COPYI
+           + NG".to_string(),
+       552 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/compl
+           + ete/_rg.ps1".to_string(),
+       553 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/compl
+           + ete/_rg".to_string(),
+       554 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/compl
+           + ete/rg.fish".to_string(),
+       555 +              "ripgrep-15.1.0-aarch64-unknown-linux-gnu/compl
+           + ete/rg.bash".to_string(),
+       556 +              
+           + "ripgrep-15.1.0-aarch64-unknown-linux-gnu/rg".to_string(),
+       557 +          ];
+       558 +  
+       559 +          let exe = find_executable(&files, "ripgrep");
+       560 +          // Should find 'rg' even though package name is 
+           + 'ripgrep'
+       561 +          // rg is an abbreviation of ripgrep (r + g from 
+           + rip-grep)
+       562 +          assert_eq!(
+       563 +              exe,
+       564 +              Some("ripgrep-15.1.0-aarch64-unknown-linux-gnu/
+           + rg".to_string())
+       565 +          );
+       566 +      }
+       567 +  
+       568 +      #[test]
+       569 +      fn test_is_excluded_file() {
+       570 +          // Documentation files
+       571 +          assert!(is_excluded_file("README.md", 
+           + "foo/README.md"));
+       572 +          assert!(is_excluded_file("CHANGELOG.md", 
+           + "doc/CHANGELOG.md"));
+       573 +          assert!(is_excluded_file("rg.1", "doc/rg.1")); // 
+           + man page
+       574 +  
+       575 +          // License files
+       576 +          assert!(is_excluded_file("LICENSE", 
+           + "foo/LICENSE"));
+       577 +          assert!(is_excluded_file("LICENSE-MIT", 
+           + "foo/LICENSE-MIT"));
+       578 +          assert!(is_excluded_file("COPYING", 
+           + "foo/COPYING"));
+       579 +          assert!(is_excluded_file("UNLICENSE", 
+           + "foo/UNLICENSE"));
+       580 +  
+       581 +          // Completion files in completion directory
+       582 +          assert!(is_excluded_file("rg.fish", 
+           + "complete/rg.fish"));
+       583 +          assert!(is_excluded_file("rg.bash", 
+           + "completions/rg.bash"));
+       584 +          assert!(is_excluded_file("_rg", "complete/_rg")); 
+           + // zsh completion
+       585 +          assert!(is_excluded_file("_rg.ps1", 
+           + "complete/_rg.ps1"));
+       586 +  
+       587 +          // NOT excluded: regular executables
+       588 +          assert!(!is_excluded_file("rg", "foo/rg"));
+       589 +          assert!(!is_excluded_file("ripgrep", 
+           + "foo/ripgrep"));
+       590 +          assert!(!is_excluded_file("tool.sh", 
+           + "bin/tool.sh"));
+       591 +      }
+       592 +  
+       593 +      #[test]
+       594 +      fn test_could_be_executable() {
+       595 +          // Windows
+       596 +          #[cfg(windows)]
+       597 +          {
+       598 +              assert!(could_be_executable("tool.exe", 
+           + "foo/tool.exe"));
+       599 +              assert!(!could_be_executable("tool", 
+           + "foo/tool"));
+       600 +          }
+       601 +  
+       602 +          // Unix
+       603 +          #[cfg(unix)]
+       604 +          {
+       605 +              // No extension = could be executable
+       606 +              assert!(could_be_executable("rg", "foo/rg"));
+       607 +              assert!(could_be_executable("ripgrep", 
+           + "foo/ripgrep"));
+       608 +  
+       609 +              // In bin/ = could be executable
+       610 +              assert!(could_be_executable("tool", 
+           + "bin/tool"));
+       611 +  
+       612 +              // Script = could be executable
+       613 +              assert!(could_be_executable("run.sh", 
+           + "foo/run.sh"));
+       614 +  
+       615 +              // Has extension = not executable (unless 
+           + script)
+       616 +              assert!(!could_be_executable("rg.fish", 
+           + "foo/rg.fish"));
+       617 +              assert!(!could_be_executable("config.toml", 
+           + "foo/config.toml"));
+       618 +          }
+       619 +      }
+       620 +  
+       621 +      #[test]
+       622        fn test_normalize_command_name() {
+       623            // Files with platform suffixes - should remove 
+             from first - or _
+       624            assert_eq!(normalize_command_name("cate-windows-x86
+             _64.exe"), "cate");
+
+● 現在構建並運行測試：
+
+● Bash(cargo test extractor --release 2>&1)
+  ⎿  Error: Exit code 101
+        Compiling cfg-if v1.0.4
+        Compiling windows-link v0.2.1
+        Compiling smallvec v1.15.1
+        Compiling stable_deref_trait v1.2.1
+        Compiling zerofrom v0.1.6
+        Compiling windows-sys v0.61.2
+        Compiling windows_x86_64_msvc v0.53.1
+        Compiling yoke v0.8.1
+        Compiling typenum v1.19.0
+     … +210 lines (ctrl+o to see all)
+
+● 測試在 Windows 上運行，但 could_be_executable 在 Windows 上只檢查
+  .exe。需要修正測試（只在 Unix 上運行）並修復警告：
+
+● Update(src\installer\extractor.rs)
+  ⎿  Updated src\installer\extractor.rs with 14 additions and 11 removals
+       365                continue;
+       366            }
+       367    
+       368 -          // Check actual file permissions if extract_dir is 
+           - provided
+       369 -          let has_exec_perm = if let Some(dir) = extract_dir 
+           - {
+       370 -              let full_path = dir.join(file);
+       371 -              has_executable_permission(&full_path)
+       372 -          } else {
+       373 -              false
+       374 -          };
+       375 -  
+       368            let name_without_ext = 
+             filename.trim_end_matches(".exe");
+       369            let mut score = 0u32;
+       370            let mut reasons = Vec::new();
+       371    
+       372            // Rule 0: Has executable permission (Unix) - 
+             strong signal
+       373            #[cfg(unix)]
+       374 -          if has_exec_perm {
+       375 -              score += 35;
+       376 -              reasons.push("has exec permission");
+       374 +          {
+       375 +              let has_exec_perm = if let Some(dir) = 
+           + extract_dir {
+       376 +                  let full_path = dir.join(file);
+       377 +                  has_executable_permission(&full_path)
+       378 +              } else {
+       379 +                  false
+       380 +              };
+       381 +              if has_exec_perm {
+       382 +                  score += 35;
+       383 +                  reasons.push("has exec permission");
+       384 +              }
+       385            }
+       386 +          // Suppress unused warning on non-Unix
+       387 +          #[cfg(not(unix))]
+       388 +          let _ = extract_dir;
+       389    
+       390            // Rule 1: Exact match with package name (highest 
+             priority)
+       391            if name_without_ext == package_name {
+
+● Update(src\installer\extractor.rs)
+  ⎿  Updated src\installer\extractor.rs with 24 additions                
+       541        }
+       542    
+       543        #[test]
+       544 +      #[cfg(unix)]
+       545        fn test_find_executable_ripgrep_linux() {
+       546            // This is the actual file list from ripgrep Linux 
+             release
+       547            let files = vec![
+     ...
+       569        }
+       570    
+       571        #[test]
+       572 +      #[cfg(windows)]
+       573 +      fn test_find_executable_ripgrep_windows() {
+       574 +          // Windows version with .exe extension
+       575 +          let files = vec![
+       576 +              "ripgrep-15.1.0-x86_64-pc-windows-msvc/doc/CHAN
+           + GELOG.md".to_string(),
+       577 +              "ripgrep-15.1.0-x86_64-pc-windows-msvc/doc/FAQ.
+           + md".to_string(),
+       578 +              "ripgrep-15.1.0-x86_64-pc-windows-msvc/UNLICENS
+           + E".to_string(),
+       579 +              "ripgrep-15.1.0-x86_64-pc-windows-msvc/README.m
+           + d".to_string(),
+       580 +              "ripgrep-15.1.0-x86_64-pc-windows-msvc/LICENSE-
+           + MIT".to_string(),
+       581 +              
+           + "ripgrep-15.1.0-x86_64-pc-windows-msvc/COPYING".to_string(),
+       582 +              "ripgrep-15.1.0-x86_64-pc-windows-msvc/complete
+           + /_rg.ps1".to_string(),
+       583 +              
+           + "ripgrep-15.1.0-x86_64-pc-windows-msvc/rg.exe".to_string(),
+       584 +          ];
+       585 +  
+       586 +          let exe = find_executable(&files, "ripgrep");
+       587 +          // Should find 'rg.exe' even though package name is
+           +  'ripgrep'
+       588 +          assert_eq!(
+       589 +              exe,
+       590 +              Some("ripgrep-15.1.0-x86_64-pc-windows-msvc/rg.
+           + exe".to_string())
+       591 +          );
+       592 +      }
+       593 +  
+       594 +      #[test]
+       595        fn test_is_excluded_file() {
+       596            // Documentation files
+       597            assert!(is_excluded_file("README.md", 
+             "foo/README.md"));
+
+● Bash(cargo test extractor --release 2>&1)
+  ⎿     Compiling wenget v0.6.0 (D:\Users\user\Documents\rust\wenget)
+     warning: field `value` is never read
+        --> src\core\repair.rs:289:13
+     … +29 lines (ctrl+o to expand)
+
+● 所有測試通過。構建 release 版本：
+
+● Bash(cargo build --release 2>&1)
+  ⎿     Compiling wenget v0.6.0 (D:\Users\user\Documents\rust\wenget)
+     warning: function `has_executable_permission` is never used
+        --> src\installer\extractor.rs:325:4
+     … +8 lines (ctrl+o to expand)
+
+● 修復 Windows 上的警告：
+
+● Update(src\installer\extractor.rs)
+  ⎿  Updated src\installer\extractor.rs with 1 addition                
+       322    }
+       323    
+       324    #[cfg(not(unix))]
+       325 +  #[allow(dead_code)]
+       326    fn has_executable_permission(_file_path: &Path) -> bool {
+       327        // On Windows, we rely on .exe extension, not 
+             permissions
+       328        true
+
+● Bash(cargo build --release 2>&1)
+  ⎿     Compiling wenget v0.6.0 (D:\Users\user\Documents\rust\wenget)
+         Finished `release` profile [optimized] target(s) in 49.02s
+
+● 完成！以下是修改摘要：
+
+  實作完成
+
+  1. 修正核心 bug (extractor.rs:290-309)
+
+  - 新增 could_be_executable() 函數，只檢查文件名而非整個路徑
+  - Unix: 無副檔名 OR 在 bin/ 目錄 OR .sh 腳本
+  - Windows: 必須有 .exe 副檔名
+
+  2. 增強排除邏輯 (extractor.rs:243-288)
+
+  新增 is_excluded_file() 函數，排除：
+  - 文檔：.md, .txt, .rst, .html, .1~`.8` (man pages)
+  - 授權：*license*, *copying*, *readme*, *changelog* 等
+  - 設定：.yml, .yaml, .toml, .json, .xml 等
+  - 補全腳本：complete/ 或 completions/ 目錄下的 .fish, .bash, .zsh, .ps1,
+  _*
+
+  3. 利用權限位 (extractor.rs:312-328, 372-388)
+
+  - Unix 系統會檢查文件的可執行權限位 (mode & 0o111)
+  - 有可執行權限的文件加 35 分
+  - find_executable_candidates() 新增 extract_dir 參數
+
+  測試
+
+  - 新增 test_find_executable_ripgrep_linux (Unix)
+  - 新增 test_find_executable_ripgrep_windows (Windows)
+  - 新增 test_is_excluded_file
+  - 新增 test_could_be_executable
+
+  現在 wenget add ripgrep 在 Linux 上應該能正確找到 rg 執行檔。請在 Termux
+  環境測試驗證。
+
+
+
