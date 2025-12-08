@@ -1,0 +1,163 @@
+
+ ▐▛███▜▌   Claude Code v2.0.61
+▝▜█████▛▘  Sonnet 4.5 · Claude Pro
+  ▘▘ ▝▝    D:\Users\user\Documents\rust\wenget
+
+> /export 
+  ⎿  Conversation copied to clipboard
+
+> /model 
+  ⎿  Set model to Default (Sonnet 4.5 · Best for everyday tasks)
+
+> fix update self u0_a286@localhost:~$ wenget update self
+Upgrading wenget...
+Current version: 0.6.0
+Latest version: 0.6.2
+New version available: 0.6.0 -> 0.6.2
+
+[2025-12-08T04:46:21Z INFO  wenget::providers::github] Fetching package 
+from: https://github.com/superyngo/wenget
+[2025-12-08T04:46:22Z INFO  wenget::providers::github] ✓ Found wenget v0.6.2
+ with 8 platform(s)
+Downloading: https://github.com/superyngo/Wenget/releases/download/v0.6.2/we
+nget-linux-aarch64-musl.tar.gz
+[2025-12-08T04:46:22Z INFO  wenget::downloader] Downloading: 
+https://github.com/superyngo/Wenget/releases/download/v0.6.2/wenget-linux-aa
+rch64-musl.tar.gz
+  [########################################] 1.82 MiB/1.82 MiB (0s)         
+                                                                           
+[2025-12-08T04:46:25Z INFO  wenget::downloader] Downloaded 1913195 bytes
+Extracting...
+[2025-12-08T04:46:25Z INFO  wenget::installer::extractor] Extracting: 
+/data/data/com.termux/files/home/.wenget/cache/self-upgrade/wenget-linux-aar
+ch64-musl.tar.gz
+[2025-12-08T04:46:25Z INFO  wenget::installer::extractor] Extracted 1 
+file(s)
+Installing new version...
+Error: Text file busy (os error 26) 
+
+● I can see the issue - the "Text file busy" error occurs because you can't
+  replace an executable that's currently running. This is a common problem
+  with self-updating programs. Let me examine the current self-update
+  implementation and fix it.
+
+● Read(src\commands\update.rs)
+  ⎿  Read 298 lines
+
+● Search(pattern: "**/self_update.rs")
+  ⎿  Found 0 files 
+
+● I found the issue! The replace_exe_unix function at line 280 is trying to
+  directly overwrite the running executable with fs::copy(), which fails
+  with "Text file busy" on Unix systems because the kernel prevents
+  replacing a running binary.
+
+  The fix is to use the same approach as Windows: rename the current
+  executable first, then copy the new one. Let me update the code:
+
+● Update(src\commands\update.rs)
+  ⎿  Updated src\commands\update.rs with 21 additions and 5 removals     
+       275    
+       276    /// Replace executable on Unix (Linux/macOS)
+       277    ///
+       278 -  /// On Unix, we can directly replace the running executable
+       278 +  /// Unix locks running executables, so we use a multi-step 
+           + process:
+       279 +  /// 1. Rename current exe to .old
+       280 +  /// 2. Copy new exe to original location
+       281 +  /// 3. The old file can be removed on next cleanup
+       282    #[cfg(not(windows))]
+       283    fn replace_exe_unix(current_exe: &std::path::PathBuf, 
+             new_exe: &std::path::PathBuf) -> Result<()> {
+       284        use std::fs;
+       285    
+       286 +      let old_exe = current_exe.with_extension("old");
+       287 +  
+       288 +      // Remove any existing .old file
+       289 +      if old_exe.exists() {
+       290 +          let _ = fs::remove_file(&old_exe);
+       291 +      }
+       292 +  
+       293 +      // Rename current executable (this allows the process 
+           + to keep running from the old inode)
+       294 +      fs::rename(current_exe, &old_exe)?;
+       295 +  
+       296 +      // Copy new executable to the original location
+       297 +      fs::copy(new_exe, current_exe)?;
+       298 +  
+       299        #[cfg(unix)]
+       300        {
+       301            use std::os::unix::fs::PermissionsExt;
+       302    
+       303            // Ensure new executable has correct permissions
+       304 -          let mut perms = fs::metadata(new_exe
+           -  )?.permissions();
+       304 +          let mut perms = fs::metadata(current_exe
+           +  )?.permissions();
+       305            perms.set_mode(0o755);
+       306 -          fs::set_permissions(new_exe, perms)?;
+       306 +          fs::set_permissions(current_exe, perms)?;
+       307        }
+       308    
+       309 -      // Copy new executable over current one
+       310 -      fs::copy(new_exe, current_exe)?;
+       309 +      // Optionally clean up old file immediately (best 
+           + effort)
+       310 +      let _ = fs::remove_file(&old_exe);
+       311    
+       312        Ok(())
+       313    }
+
+● Perfect! I've fixed the self-update issue. The problem was that the Unix
+  version was trying to directly overwrite the running executable, which the
+   kernel prevents with "Text file busy" error.
+
+  The fix:
+  1. Rename the current executable to wenget.old first (this allows the
+  process to keep running from the old inode)
+  2. Copy the new executable to the original location
+  3. Set permissions (755) on the new executable
+  4. Clean up the old file (best effort)
+
+  Now let's build and test it:
+
+● Bash(cargo build --release)
+  ⎿     Compiling wenget v0.6.2 (D:\Users\user\Documents\rust\wenget)
+         Finished `release` profile [optimized] target(s) in 1m 01s
+
+● Build successful! The fix is ready.
+
+  What was wrong:
+  The replace_exe_unix function was trying to directly copy over the running
+   executable, which fails on Unix systems (including Termux/Android)
+  because the kernel marks running binaries as "busy".
+
+  How it's fixed:
+  The new implementation:
+  1. Renames the current running executable to .old (the process keeps
+  running from the old inode)
+  2. Copies the new binary to the original location
+  3. Sets proper execute permissions
+  4. Cleans up the old file
+
+  To test the fix:
+
+  Since you're on Termux, you'll need to replace your current wenget binary
+  with this fixed version:
+
+  # Build on your Windows machine (already done), then transfer to Termux
+  # Or if you're building on Termux directly:
+  cargo build --release
+
+  # Copy the new binary to your PATH
+  cp target/release/wenget ~/.cargo/bin/wenget
+  # or wherever your wenget is installed
+
+  # Now test the self-update
+  wenget update self
+
+  The self-update should now complete successfully without the "Text file
+  busy" error!
+
+
+
